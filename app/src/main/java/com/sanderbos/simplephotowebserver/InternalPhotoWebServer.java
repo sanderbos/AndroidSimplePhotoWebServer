@@ -1,28 +1,37 @@
 package com.sanderbos.simplephotowebserver;
 
 import android.os.Environment;
-import android.util.Log;
+
+import com.sanderbos.simplephotowebserver.util.MyLog;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.Map;
 
 import fi.iki.elonen.NanoHTTPD;
 
-public class InternalWebServer extends NanoHTTPD {
+/**
+ * NanoHTTPD extension that drives the simple photo web server. The starting point for this server
+ * was found on http://stackoverflow.com/questions/14309256/using-nanohttpd-in-android.
+ */
+public class InternalPhotoWebServer extends NanoHTTPD {
 
-    public InternalWebServer() {
-        super(9009);
+    /**
+     * Constructor.
+     * @param port The listening port for the web server.
+     */
+    public InternalPhotoWebServer(int port) {
+        super(port);
     }
 
+    /**
+     * Main method, that handles a HTTP request.
+     * @param httpRequest The HTTP request information.
+     * @return The response with the content to return to the browser.
+     */
     @Override
-//    public Response serve(String uri, Method method,
-//                          Map<String, String> header,
-//                          Map<String, String> parameters,
-//                          Map<String, String> files) {
-    public Response serve(IHTTPSession session) {
+    public Response serve(IHTTPSession httpRequest) {
         String answer = "";
         try {
             // Open file from SD Card

@@ -1,8 +1,5 @@
 package com.sanderbos.simplephotowebserver;
 
-import android.content.Context;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.view.Menu;
@@ -11,22 +8,46 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
+import com.sanderbos.simplephotowebserver.util.MyLog;
+import com.sanderbos.simplephotowebserver.util.NetworkUtil;
+
 import java.io.IOException;
-import java.net.Inet4Address;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
-import java.util.Enumeration;
+import java.text.MessageFormat;
 
-
+/**
+ * Main activity for project, showing the status and allowing the server to be stopped and started.
+ */
 public class SimplePhotoWebServerActivity extends ActionBarActivity {
 
-    InternalWebServer internalWebServer;
+    /**
+     * Reference to running web server daemon (null if not currently running).
+     */
+    InternalPhotoWebServer internalWebServer;
 
+    /**
+     * Reference to start button.
+     */
     private Button startButton;
+
+    /**
+     * Reference to stop button.
+     */
     private Button stopButton;
+
+    /**
+     * Reference to status text.
+     */
     private TextView statusTextView;
 
+    /**
+     * Reference to status text for the current URL.
+     */
+    private TextView urlTextView;
+
+    /**
+     * onCreate implementation, get references to screen items and set up initial state.
+     * @param savedInstanceState Previous state of activity.
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -35,21 +56,29 @@ public class SimplePhotoWebServerActivity extends ActionBarActivity {
         startButton = (Button) findViewById(R.id.startButton);
         stopButton = (Button) findViewById(R.id.stopButton);
         statusTextView = (TextView) findViewById(R.id.statusText);
+        urlTextView = (TextView) findViewById(R.id.urlText);
 
         updateGUIStatus();
 
-        //startWebServer();
-
     }
 
-
+    /**
+     * onCreateOptionsMenu implementation.
+     * @param menu Reference to menu.
+     * @return Return false to not show menu initially.
+     */
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_simple_photo_web_server, menu);
-        return true;
+        return false;
     }
 
+    /**
+     * onOptionsItemSelected implementation.
+     * @param item The menu item being clicked.
+     * @return True in case menu item selection has been consumed.
+     */
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         // Handle action bar item clicks here. The action bar will
@@ -65,34 +94,53 @@ public class SimplePhotoWebServerActivity extends ActionBarActivity {
         return super.onOptionsItemSelected(item);
     }
 
+    /**
+     * onDestroy implementation, stop web server if it is currently running.
+     */
     @Override
     protected void onDestroy() {
         super.onDestroy();
-
         stopWebServer();
     }
 
+    /**
+     * onStop implementation, stop web server if it is currently running.
+     */
     @Override
     protected void onStop() {
         stopWebServer();
         super.onStop();
     }
 
+    /**
+     * Handler for click of start button, start the web server.
+     * @param view The button clicked.
+     */
     public void onStartButtonClicked(View view) {
+
         startWebServer();
     }
 
+    /**
+     * Handler for click of stop button, stop the web server.
+     * @param view The button clicked.
+     */
     public void onStopButtonClicked(View view) {
         stopWebServer();
     }
 
+    /**
+     * Start the web server in the background.
+     * @return Whether the web server was started (currently always true).
+     */
     private boolean startWebServer() {
         MyLog.debug("startWebServer called");
         stopWebServer();
-        internalWebServer = new InternalWebServer();
+        int port = Integer.valueOf(getResources().getText(R.string.number_default_httpd_port).toString());
+        internalWebServer = new InternalPhotoWebServer(port);
         try {
             internalWebServer.start();
-        } catch(IOException ioException) {
+        } catch (IOException ioException) {
             MyLog.error("The server could not start.", ioException);
         }
         MyLog.debug("Web server initialized.");
@@ -100,6 +148,10 @@ public class SimplePhotoWebServerActivity extends ActionBarActivity {
         return true;
     }
 
+    /**
+     * Stop the web server, if one is running  in the background.
+     * @return Whether the web server was stopped (currently always true).
+     */
     private boolean stopWebServer() {
         MyLog.debug("stopWebServer called");
         boolean stopped = false;
@@ -113,59 +165,48 @@ public class SimplePhotoWebServerActivity extends ActionBarActivity {
         return stopped;
     }
 
+    /**
+     * Check the current status of the web server background thread, and the wifi status, and
+     * set the status text fields and enable or disable the buttons appropriately.
+     */
     private void updateGUIStatus() {
-        if (!isWifiEnabled()) {
-            statusTextView.setText("Please enable Wifi access first");
+        if (!NetworkUtil.isWifiEnabled(this)) {
+            statusTextView.setText(getResources().getText(R.string.msg_enable_wifi));
+            urlTextView.setText("");
             startButton.setEnabled(false);
             stopButton.setEnabled(false);
         } else if (isWebServerRunning()) {
             String publicURL = getPublicURL();
-            statusTextView.setText("Server is running on " + publicURL);
+            statusTextView.setText(getResources().getText(R.string.msg_server_running));
+            urlTextView.setText(publicURL);
             startButton.setEnabled(false);
             stopButton.setEnabled(true);
         } else {
-            statusTextView.setText("Server is not running");
+            statusTextView.setText(getResources().getText(R.string.msg_server_not_running));
+            urlTextView.setText("");
             startButton.setEnabled(true);
             stopButton.setEnabled(false);
         }
     }
 
+    /**
+     * Construct the URL by which the web server is accessible.
+     * @return The public URL, or null in case there is not currently a web server running.
+     */
     private String getPublicURL() {
         String result = null;
-        if (isWifiEnabled() && isWebServerRunning()) {
-            result = "http://" + getLocalIpAddress() + ":" + internalWebServer.getListeningPort() + "/";
+        if (NetworkUtil.isWifiEnabled(this) && isWebServerRunning()) {
+            result = MessageFormat.format("http://{0}:{1,number,#}/", NetworkUtil.getLocalIpAddress(this), internalWebServer.getListeningPort());
         }
         return result;
     }
 
+    /**
+     * Determine from the internalWebServer field whether a web server background thread is currently running.
+     * @return True in case a web server thread is currently running in the background, false if it is not.
+     */
     private boolean isWebServerRunning() {
         return internalWebServer != null && internalWebServer.isAlive();
     }
 
-    private boolean isWifiEnabled() {
-        ConnectivityManager connManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo wifiNetworkInfo = connManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
-        return wifiNetworkInfo!= null && wifiNetworkInfo.isConnected();
-    }
-
-    private String getLocalIpAddress() {
-        try {
-            if (isWifiEnabled()) {
-                for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements(); ) {
-                    NetworkInterface intf = en.nextElement();
-                    for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements(); ) {
-                        InetAddress inetAddress = enumIpAddr.nextElement();
-                        if (!inetAddress.isLoopbackAddress() && inetAddress instanceof Inet4Address) {
-                            String ip = inetAddress.getHostAddress();
-                            MyLog.debug("***** IP=" + ip);
-                            return ip;
-                        }
-                    }
-                }
-            }
-        } catch (SocketException ex) {
-            MyLog.error(ex.toString(), ex);
-        }
-        return null;
-    }
 }
