@@ -1,13 +1,6 @@
 package com.sanderbos.simplephotowebserver;
 
-import android.os.Environment;
-
-import com.sanderbos.simplephotowebserver.util.MyLog;
-
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
+import android.app.Activity;
 
 import fi.iki.elonen.NanoHTTPD;
 
@@ -18,19 +11,71 @@ import fi.iki.elonen.NanoHTTPD;
 public class InternalPhotoWebServer extends NanoHTTPD {
 
     /**
-     * Constructor.
-     * @param port The listening port for the web server.
+     * The context activity, used to resolve resources.
      */
-    public InternalPhotoWebServer(int port) {
+    private Activity context;
+
+    /**
+     * Constructor.
+     *
+     * @param port    The listening port for the web server.
+     * @param context The activity context (the activity must remain valid while the server is active.
+     */
+    public InternalPhotoWebServer(int port, Activity context) {
         super(port);
+        this.context = context;
     }
 
     /**
      * Main method, that handles a HTTP request.
+     *
      * @param httpRequest The HTTP request information.
      * @return The response with the content to return to the browser.
      */
     @Override
+    public Response serve(IHTTPSession httpRequest) {
+
+        String uri = httpRequest.getUri();
+        Response response;
+        if ("/default_style.css".equals(uri)) {
+            return getDefaultCssReponse();
+        } else {
+            response = get404Response(httpRequest);
+        }
+        return response;
+    }
+
+    /**
+     * Generate a 404 error message page.
+     * @param httpRequest The current request, it must already have been determined that a 404
+     *                    not found response is applicable.
+     * @return A 404 response with HTML message
+     */
+    private Response get404Response(IHTTPSession httpRequest) {
+        HtmlTemplateProcessor result = new HtmlTemplateProcessor(context);
+        result.set404Title(httpRequest.getUri());
+        String html404Content = result.getHtmlOutput();
+        Response response = new NanoHTTPD.Response(html404Content);
+        response.setStatus(Response.Status.NOT_FOUND);
+        return response;
+    }
+
+    /**
+     * Get the default CSS content as response.
+     * @return A response with the CSS content with mime type text/css
+     */
+    private Response getDefaultCssReponse() {
+        String cssContent = context.getResources().getText(R.string.default_css).toString();
+
+        Response response = new NanoHTTPD.Response(cssContent);
+        // Css must be returned as mime-type CSS, otherwise browsers will ignore the CSS
+        response.setMimeType("text/css");
+        return response;
+    }
+
+
+
+    /*
     public Response serve(IHTTPSession httpRequest) {
         String answer = "";
         try {
@@ -54,4 +99,5 @@ public class InternalPhotoWebServer extends NanoHTTPD {
 
         return new NanoHTTPD.Response(answer);
     }
+     */
 }

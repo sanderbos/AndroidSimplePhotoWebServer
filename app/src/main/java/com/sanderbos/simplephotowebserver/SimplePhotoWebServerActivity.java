@@ -137,7 +137,7 @@ public class SimplePhotoWebServerActivity extends ActionBarActivity {
         MyLog.debug("startWebServer called");
         stopWebServer();
         int port = Integer.valueOf(getResources().getText(R.string.number_default_httpd_port).toString());
-        internalWebServer = new InternalPhotoWebServer(port);
+        internalWebServer = new InternalPhotoWebServer(port, this);
         try {
             internalWebServer.start();
         } catch (IOException ioException) {
