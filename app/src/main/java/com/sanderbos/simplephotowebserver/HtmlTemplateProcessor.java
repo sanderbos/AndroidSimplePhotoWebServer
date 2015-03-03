@@ -73,16 +73,6 @@ public class HtmlTemplateProcessor {
     private static final int NUM_THUMBNAIL_COLUMNS = 6;
 
     /**
-     * The width to use for all thumbnails.
-     */
-    private static final int THUMBNAIL_WIDTH = 40;
-
-    /**
-     * The height to use for all thumbnails.
-     */
-    private static final int THUMBNAIL_HEIGHT = 40;
-
-    /**
      * Page size (for thumbnails).
      */
     public static final int THUMBNAIL_PAGE_SIZE = NUM_THUMBNAIL_ROWS * NUM_THUMBNAIL_COLUMNS;
@@ -241,11 +231,10 @@ public class HtmlTemplateProcessor {
 
             if (index < fileEntries.size()) {
                 CacheFileEntry fileEntry = fileEntries.get(index);
-                addHtmlContent("<td>");
-                String name = fileEntry.getFullPath().substring(fileEntry.getFullPath().lastIndexOf('/') + 1);
-                addHtmlContent(createHyperLink(name, constructTargetURL(ACTION_URL_SHOW_PHOTO, fileEntry.getFullPath()), null));
-                addHtmlNewline();
-                addHtmlContent(createImage(constructTargetURL(ACTION_URL_SHOW_THUMBNAIL, fileEntry.getFullPath()), THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT, null));
+                addHtmlContent("<td class=\"thumbnail-cell-regular\">");
+                String imageTag = createImage(constructTargetURL(ACTION_URL_SHOW_THUMBNAIL, fileEntry.getFullPath()), "image-thumbnail", null);
+                String imageTagWithHyperLink = createHyperLink(imageTag, constructTargetURL(ACTION_URL_SHOW_PHOTO, fileEntry.getFullPath()), null);
+                addHtmlContent(imageTagWithHyperLink);
                 addHtmlContent("</td>");
             }
         }
@@ -286,16 +275,16 @@ public class HtmlTemplateProcessor {
     /**
      * Create a hyperlink string.
      *
-     * @param name    The text to use in the hyperlink.
+     * @param linkContent    The text or html fragment to place within the hyperlink.
      * @param url     The URL to display.
      * @param altText The alt-text to use, if relevant.
      */
-    private String createHyperLink(String name, String url, String altText) {
+    private String createHyperLink(String linkContent, String url, String altText) {
         String htmlHyperLink;
         if (altText != null) {
-            htmlHyperLink = MessageFormat.format("<a href=\"{1}\" alt=\"{2}\">{0}</a>", name, url, altText);
+            htmlHyperLink = MessageFormat.format("<a href=\"{1}\" alt=\"{2}\">{0}</a>", linkContent, url, altText);
         } else {
-            htmlHyperLink = MessageFormat.format("<a href=\"{1}\">{0}</a>", name, url);
+            htmlHyperLink = MessageFormat.format("<a href=\"{1}\">{0}</a>", linkContent, url);
         }
         return htmlHyperLink;
     }
@@ -304,14 +293,17 @@ public class HtmlTemplateProcessor {
      * Construct an img tag.
      *
      * @param sourceURL The url to use in the source.
-     * @param width     The width of the image.
-     * @param height    The height of the image.
+     * @param cssClass  Optional css class for use with the image tag.
+     * @param altText   Optional alt attribute text.
      * @return The text of an image.
      */
-    private String createImage(String sourceURL, int width, int height, String altText) {
-        String result = MessageFormat.format("<img src=\"{0}\" width=\"{1}\" ", sourceURL, String.valueOf(width));
+    private String createImage(String sourceURL, String cssClass, String altText) {
+        String result = MessageFormat.format("<img src=\"{0}\"", sourceURL);
+        if (cssClass != null) {
+            result += MessageFormat.format(" class=\"{0}\"", cssClass);
+        }
         if (altText != null) {
-            result += MessageFormat.format(" alt height=\"{0}\"", altText);
+            result += MessageFormat.format(" alt=\"{0}\"", altText);
         }
         result += "/>";
         return result;

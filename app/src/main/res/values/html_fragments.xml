@@ -25,6 +25,8 @@
             .main-container {margin: 30px 30px 30px 30px; background: #D3D3D3; padding: 20px;}\n
             a {color: black;}\n
             a:visited {color: black;}\n
+            .image-thumbnail {width: 40px}\n
+            .thumbnail-cell-regular {border: 1px dotted grey; margin: 0px; padding: 0px}\n
         ]]>
     </string>
     <string name="title_regular">Simple Photo Web Server</string>
