@@ -22,6 +22,11 @@ public class HtmlTemplateProcessor {
     public static final String PATH_PARAM_NAME = "path";
 
     /**
+     * Page number parameter name.
+     */
+    public static final String PAGE_NUMBER_PARAM_NAME = "page";
+
+    /**
      * Url directory parameter name.
      */
     public static final String ACTION_SHOW_DIR_NAME = "/showDir";
@@ -51,6 +56,18 @@ public class HtmlTemplateProcessor {
      * Template keyword for uri.
      */
     private static final String KEYWORD_URI = "uri";
+
+    /**
+     * The number of thumbnail rows.
+     */
+    private static final int NUM_THUMBNAIL_ROWS = 3;
+
+    /**
+     * The number of thumbnail columns.
+     */
+    private static final int NUM_THUMBNAIL_COLUMNS = 6;
+
+    public static final int THUMBNAIL_PAGE_SIZE = NUM_THUMBNAIL_ROWS * NUM_THUMBNAIL_COLUMNS;
 
     /**
      * A context object for the template.
@@ -134,14 +151,14 @@ public class HtmlTemplateProcessor {
      * Add a separator to the content.
      */
     public void addSeparator() {
-        addStringContent(getResourceText(R.string.html_separator));
+        addHtmlContent(getResourceText(R.string.html_separator));
     }
 
     /**
      * Add a break newline to the HTML content.
      */
     public void addHtmlNewline() {
-        addStringContent("<br/>");
+        addHtmlContent("<br/>");
     }
 
     /**
@@ -151,36 +168,36 @@ public class HtmlTemplateProcessor {
      * @param directoryEntryToHighlight The directory entry to highlight in the tree.
      */
     public void createDirectoryTree(CacheDirectoryEntry cachedDirectoryEntry, CacheDirectoryEntry directoryEntryToHighlight) {
-        addStringContent("<ul>");
+        addHtmlContent("<ul>");
         createDirectoryTreeRecursive(cachedDirectoryEntry, directoryEntryToHighlight);
-        addStringContent("</ul>");
+        addHtmlContent("</ul>");
     }
 
     /**
      * Generate a directory structure HTML tree. This is a recursive method, in case there are
      * sub directories a tree is created for those as well.
      *
-     * @param cachedDirectoryEntry The directory to add an item for.
+     * @param cachedDirectoryEntry      The directory to add an item for.
      * @param directoryEntryToHighlight The directory entry to highlight in the tree.
      */
     private void createDirectoryTreeRecursive(CacheDirectoryEntry cachedDirectoryEntry, CacheDirectoryEntry directoryEntryToHighlight) {
         String name = cachedDirectoryEntry.getName();
         String path = cachedDirectoryEntry.getFullPath();
         String url = constructActionURL(ACTION_SHOW_DIR_NAME, path);
-        addStringContent("<li>");
+        addHtmlContent("<li>");
         String hyperlink = createHyperLink(name, url, null);
         if (cachedDirectoryEntry.equals(directoryEntryToHighlight)) {
             hyperlink = "<b>" + hyperlink + "</b>";
         }
-        addStringContent(hyperlink);
-        addStringContent("</li>");
+        addHtmlContent(hyperlink);
+        addHtmlContent("</li>");
         List<CacheDirectoryEntry> subDirectories = cachedDirectoryEntry.getSubDirectoryList();
         if (subDirectories.size() > 0) {
-            addStringContent("<ul>");
+            addHtmlContent("<ul>");
             for (CacheDirectoryEntry subDirectoryEntry : subDirectories) {
                 createDirectoryTreeRecursive(subDirectoryEntry, directoryEntryToHighlight);
             }
-            addStringContent("</ul>");
+            addHtmlContent("</ul>");
         }
     }
 
@@ -193,6 +210,19 @@ public class HtmlTemplateProcessor {
      */
     private String constructActionURL(String action, String pathParameterValue) {
         return MessageFormat.format("{0}?{1}={2}", action, PATH_PARAM_NAME, pathParameterValue);
+    }
+
+    /**
+     * Construct an action URL string, of the format action?path=pathValue
+     *
+     * @param action              The base action URL
+     * @param pathParameterValue  The value to use for the path parameter.
+     * @param thumbnailPageNumber The thumbnail page number to include in the constructed URL
+     * @return The constructed string.
+     */
+    private String constructActionURL(String action, String pathParameterValue, int thumbnailPageNumber) {
+        return MessageFormat.format("{0}?{3}={4}&{1}={2}", action, PATH_PARAM_NAME, pathParameterValue,
+                PAGE_NUMBER_PARAM_NAME, String.valueOf(thumbnailPageNumber));
     }
 
     /**
@@ -216,13 +246,52 @@ public class HtmlTemplateProcessor {
      * List the directory contents, as a set of thumbnails.
      *
      * @param cachedDirectoryEntry The directory whose content to show.
+     * @param thumbnailPageNumber  The page number of thumbnails to display.
      */
-    public void addDirectoryContentsAsThumbnails(CacheDirectoryEntry cachedDirectoryEntry) {
+    public void addDirectoryContentsAsThumbnails(CacheDirectoryEntry cachedDirectoryEntry, int thumbnailPageNumber) {
         List<CacheFileEntry> fileEntries = cachedDirectoryEntry.getFileList();
-        for (CacheFileEntry fileEntry : fileEntries) {
-            addStringContent(createHyperLink(fileEntry.getPath(), constructActionURL(ACTION_SHOW_PHOTO_NAME, fileEntry.getPath()), null));
-            addHtmlNewline();
+        if (thumbnailPageNumber < 0) {
+            thumbnailPageNumber = 0;
         }
+
+        addHtmlContent("<table><tr><td>");
+        if (thumbnailPageNumber > 0) {
+            addHtmlContent(createHyperLink("&lt;", constructActionURL(ACTION_SHOW_DIR_NAME, cachedDirectoryEntry.getFullPath(), thumbnailPageNumber - 1), null));
+        }
+        addHtmlContent("</td><td>");
+
+        int firstItem = thumbnailPageNumber * THUMBNAIL_PAGE_SIZE;
+        int lastItem = (thumbnailPageNumber + 1) * THUMBNAIL_PAGE_SIZE;
+        int index;
+        int currentColumnIndex = 0;
+
+        addHtmlContent("<table><tr>");
+        // This always renders an entire table
+        for (index = firstItem; index < lastItem; index++) {
+
+            if (currentColumnIndex > NUM_THUMBNAIL_COLUMNS) {
+                // Start a new row
+                currentColumnIndex = 0;
+                addHtmlContent("</tr><tr>");
+            }
+            currentColumnIndex++;
+
+            if (index < fileEntries.size()) {
+                CacheFileEntry fileEntry = fileEntries.get(index);
+                addHtmlContent("<td>");
+                String name = fileEntry.getPath().substring(fileEntry.getPath().lastIndexOf('/')+1);
+                addHtmlContent(createHyperLink(name, constructActionURL(ACTION_SHOW_PHOTO_NAME, fileEntry.getPath()), null));
+                addHtmlContent("</td>");
+            }
+        }
+        addHtmlContent("</tr></table>");
+
+        addHtmlContent("</td><td>");
+        if (index < fileEntries.size()) {
+            // There are more entries beyond the ones now shown.
+            addHtmlContent(createHyperLink("&gt;", constructActionURL(ACTION_SHOW_DIR_NAME, cachedDirectoryEntry.getFullPath(), thumbnailPageNumber + 1), null));
+        }
+        addHtmlContent("</td></tr></table>");
     }
 
     /**
@@ -230,7 +299,7 @@ public class HtmlTemplateProcessor {
      *
      * @param contentFragment The content to add.
      */
-    private void addStringContent(String contentFragment) {
+    private void addHtmlContent(String contentFragment) {
         content.append(contentFragment);
         content.append("\n");
     }

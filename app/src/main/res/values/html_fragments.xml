@@ -21,8 +21,8 @@
         <![CDATA[
             body { font-family:Arial, sans-serif; background: #D9D9D9; }\n
             table { margin: 1em; border-collapse: collapse; }\n
-            td, th { padding: .3em; border: 0px #ccc solid; vertical-align: top }\n
-            .main-container {margin: 30px 30px 30px 30px; width: 600px; background: #D3D3D3; padding: 20px;}\n
+            td, th { padding: .3em; border: 0px #ccc solid; vertical-align: center }\n
+            .main-container {margin: 30px 30px 30px 30px; background: #D3D3D3; padding: 20px;}\n
             a {color: black;}\n
             a:visited {color: black;}\n
         ]]>

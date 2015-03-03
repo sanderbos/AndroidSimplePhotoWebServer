@@ -60,9 +60,9 @@ public class InternalPhotoWebServer extends NanoHTTPD {
         if ("/default_style.css".equals(uri)) {
             return getDefaultCssReponse();
         } else if ("/".equals(uri)) {
-            return displayDirectoryContentAsHtml(null);
+            return displayDirectoryContentAsHtml(null, -1);
         } else if (HtmlTemplateProcessor.ACTION_SHOW_DIR_NAME.equals(uri)) {
-            return showDirectory(httpRequest, httpRequest.getParms().get("path"));
+            return showDirectory(httpRequest, httpRequest.getParms().get(HtmlTemplateProcessor.PATH_PARAM_NAME), getPageNumber(httpRequest));
         } else {
             response = get404Response(httpRequest.getUri());
         }
@@ -73,9 +73,10 @@ public class InternalPhotoWebServer extends NanoHTTPD {
      * Generate a response with directory contents shown.
      * @param httpRequest The context request.
      * @param path The path to show, if null a 500 page is generated.
+     *                    @param thumbnailPageNumber The current page number is available (set to zero or -1 if not available).
      * @return The response html page.
      */
-    private Response showDirectory(IHTTPSession httpRequest, String path) {
+    private Response showDirectory(IHTTPSession httpRequest, String path, int thumbnailPageNumber) {
         Response response;
         if (path == null) {
             response = get500Response(httpRequest);
@@ -84,7 +85,7 @@ public class InternalPhotoWebServer extends NanoHTTPD {
             if (!directory.exists()) {
                 response = get404Response(path);
             } else {
-                return displayDirectoryContentAsHtml(path);
+                return displayDirectoryContentAsHtml(path, thumbnailPageNumber);
             }
         }
         return response;
@@ -94,9 +95,10 @@ public class InternalPhotoWebServer extends NanoHTTPD {
      * Generate a html response page for a list of directories. If there is only one directory
      * involved its images are also listed.
      * @param currentPath The currently shown directory that is also the path to highlight in the directory tree, can be null.
+     *                    @param thumbnailPageNumber The current page number is available (set to zero or -1 if not available).
      * @return The response html page.
      */
-    private Response displayDirectoryContentAsHtml(String currentPath) {
+    private Response displayDirectoryContentAsHtml(String currentPath, int thumbnailPageNumber) {
         HtmlTemplateProcessor htmlOutput = new HtmlTemplateProcessor(context);
         List<String> directories = new ArrayList<>();
         directories.add(TEMP_IMAGES_PATH);
@@ -120,7 +122,7 @@ public class InternalPhotoWebServer extends NanoHTTPD {
         // If a directory is selected, show its contents as thumbnails.
         htmlOutput.addSeparator();
         if (currentPathCachedDirectory != null) {
-            htmlOutput.addDirectoryContentsAsThumbnails(currentPathCachedDirectory);
+            htmlOutput.addDirectoryContentsAsThumbnails(currentPathCachedDirectory, thumbnailPageNumber);
             htmlOutput.addSeparator();
         }
 
@@ -184,6 +186,23 @@ public class InternalPhotoWebServer extends NanoHTTPD {
         // Css must be returned as mime-type CSS, otherwise browsers will ignore the CSS
         response.setMimeType("text/css");
         return response;
+    }
+
+    /**
+     * Extract a page number from the request parameters (if a 'page' parameter is set).
+     * @param httpRequest The request to extract the page number from.
+     * @return The page number, or -1 if none is set or could be determined.
+     */
+    private int getPageNumber(IHTTPSession httpRequest) {
+        String pageNumberParameter = httpRequest.getParms().get(HtmlTemplateProcessor.PAGE_NUMBER_PARAM_NAME);
+        int result;
+        try {
+            result = Integer.valueOf(pageNumberParameter);
+        } catch (Exception e) {
+            // For any exception, null, not a number, set value to null
+            result = -1;
+        }
+        return result;
     }
 
 
