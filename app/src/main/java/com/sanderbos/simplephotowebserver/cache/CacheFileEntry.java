@@ -23,20 +23,29 @@ public class CacheFileEntry {
     private String thumbnailPath;
 
     /**
+     * All cached entries share the same cache registry.
+     */
+    private CacheRegistry cache;
+
+    /**
      * Constructor.
      * @param file The file being cached.
+     * @param cache A shared registry of all cached directories and files.
      */
-    public CacheFileEntry(File file) {
+    public CacheFileEntry(File file, CacheRegistry cache) {
         this.path = file.getAbsolutePath();
         this.lastModificationTimestamp = file.lastModified();
         this.thumbnailPath = file.getAbsolutePath();
+        this.cache = cache;
+
+        this.cache.registerFile(this);
     }
 
     /**
      * Get the full path of the file.
      * @return The full path of the file.
      */
-    public String getPath() {
+    public String getFullPath() {
         return path;
     }
 

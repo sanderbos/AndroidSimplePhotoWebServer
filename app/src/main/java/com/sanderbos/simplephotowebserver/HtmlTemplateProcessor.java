@@ -19,22 +19,27 @@ public class HtmlTemplateProcessor {
     /**
      * Url path parameter name.
      */
-    public static final String PATH_PARAM_NAME = "path";
+    public static final String PARAMETER_PATH = "path";
 
     /**
      * Page number parameter name.
      */
-    public static final String PAGE_NUMBER_PARAM_NAME = "page";
+    public static final String PARAMETER_PAGE_NUMBER = "page";
 
     /**
      * Url directory parameter name.
      */
-    public static final String ACTION_SHOW_DIR_NAME = "/showDir";
+    public static final String ACTION_URL_SHOW_DIRECTORY = "/showDir";
 
     /**
      * Url photo action name.
      */
-    public static final String ACTION_SHOW_PHOTO_NAME = "/showPhoto";
+    public static final String ACTION_URL_SHOW_PHOTO = "/showPhoto";
+
+    /**
+     * Url photo action name.
+     */
+    public static final String ACTION_URL_SHOW_THUMBNAIL = "/showThumbnail";
 
 
     /**
@@ -67,6 +72,19 @@ public class HtmlTemplateProcessor {
      */
     private static final int NUM_THUMBNAIL_COLUMNS = 6;
 
+    /**
+     * The width to use for all thumbnails.
+     */
+    private static final int THUMBNAIL_WIDTH = 40;
+
+    /**
+     * The height to use for all thumbnails.
+     */
+    private static final int THUMBNAIL_HEIGHT = 40;
+
+    /**
+     * Page size (for thumbnails).
+     */
     public static final int THUMBNAIL_PAGE_SIZE = NUM_THUMBNAIL_ROWS * NUM_THUMBNAIL_COLUMNS;
 
     /**
@@ -148,20 +166,6 @@ public class HtmlTemplateProcessor {
     }
 
     /**
-     * Add a separator to the content.
-     */
-    public void addSeparator() {
-        addHtmlContent(getResourceText(R.string.html_separator));
-    }
-
-    /**
-     * Add a break newline to the HTML content.
-     */
-    public void addHtmlNewline() {
-        addHtmlContent("<br/>");
-    }
-
-    /**
      * Generate a directory structure HTML tree.
      *
      * @param cachedDirectoryEntry      The root directory to generate a tree for.
@@ -183,7 +187,7 @@ public class HtmlTemplateProcessor {
     private void createDirectoryTreeRecursive(CacheDirectoryEntry cachedDirectoryEntry, CacheDirectoryEntry directoryEntryToHighlight) {
         String name = cachedDirectoryEntry.getName();
         String path = cachedDirectoryEntry.getFullPath();
-        String url = constructActionURL(ACTION_SHOW_DIR_NAME, path);
+        String url = constructTargetURL(ACTION_URL_SHOW_DIRECTORY, path);
         addHtmlContent("<li>");
         String hyperlink = createHyperLink(name, url, null);
         if (cachedDirectoryEntry.equals(directoryEntryToHighlight)) {
@@ -202,47 +206,6 @@ public class HtmlTemplateProcessor {
     }
 
     /**
-     * Construct an action URL string, of the format action?path=pathValue
-     *
-     * @param action             The base action URL
-     * @param pathParameterValue The value to use for the path parameter.
-     * @return The constructed string.
-     */
-    private String constructActionURL(String action, String pathParameterValue) {
-        return MessageFormat.format("{0}?{1}={2}", action, PATH_PARAM_NAME, pathParameterValue);
-    }
-
-    /**
-     * Construct an action URL string, of the format action?path=pathValue
-     *
-     * @param action              The base action URL
-     * @param pathParameterValue  The value to use for the path parameter.
-     * @param thumbnailPageNumber The thumbnail page number to include in the constructed URL
-     * @return The constructed string.
-     */
-    private String constructActionURL(String action, String pathParameterValue, int thumbnailPageNumber) {
-        return MessageFormat.format("{0}?{3}={4}&{1}={2}", action, PATH_PARAM_NAME, pathParameterValue,
-                PAGE_NUMBER_PARAM_NAME, String.valueOf(thumbnailPageNumber));
-    }
-
-    /**
-     * Create a hyperlink string.
-     *
-     * @param name    The text to use in the hyperlink.
-     * @param url     The URL to display.
-     * @param altText The alt-text to use, if relevant.
-     */
-    private String createHyperLink(String name, String url, String altText) {
-        String htmlHyperLink;
-        if (altText != null) {
-            htmlHyperLink = MessageFormat.format("<a href=\"{1}\" alt=\"{2}\">{0}</a>", name, url, altText);
-        } else {
-            htmlHyperLink = MessageFormat.format("<a href=\"{1}\">{0}</a>", name, url);
-        }
-        return htmlHyperLink;
-    }
-
-    /**
      * List the directory contents, as a set of thumbnails.
      *
      * @param cachedDirectoryEntry The directory whose content to show.
@@ -256,7 +219,7 @@ public class HtmlTemplateProcessor {
 
         addHtmlContent("<table><tr><td>");
         if (thumbnailPageNumber > 0) {
-            addHtmlContent(createHyperLink("&lt;", constructActionURL(ACTION_SHOW_DIR_NAME, cachedDirectoryEntry.getFullPath(), thumbnailPageNumber - 1), null));
+            addHtmlContent(createHyperLink("&lt;", constructActionURL(ACTION_URL_SHOW_DIRECTORY, cachedDirectoryEntry.getFullPath(), thumbnailPageNumber - 1), null));
         }
         addHtmlContent("</td><td>");
 
@@ -279,8 +242,10 @@ public class HtmlTemplateProcessor {
             if (index < fileEntries.size()) {
                 CacheFileEntry fileEntry = fileEntries.get(index);
                 addHtmlContent("<td>");
-                String name = fileEntry.getPath().substring(fileEntry.getPath().lastIndexOf('/')+1);
-                addHtmlContent(createHyperLink(name, constructActionURL(ACTION_SHOW_PHOTO_NAME, fileEntry.getPath()), null));
+                String name = fileEntry.getFullPath().substring(fileEntry.getFullPath().lastIndexOf('/') + 1);
+                addHtmlContent(createHyperLink(name, constructTargetURL(ACTION_URL_SHOW_PHOTO, fileEntry.getFullPath()), null));
+                addHtmlNewline();
+                addHtmlContent(createImage(constructTargetURL(ACTION_URL_SHOW_THUMBNAIL, fileEntry.getFullPath()), THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT, null));
                 addHtmlContent("</td>");
             }
         }
@@ -289,9 +254,81 @@ public class HtmlTemplateProcessor {
         addHtmlContent("</td><td>");
         if (index < fileEntries.size()) {
             // There are more entries beyond the ones now shown.
-            addHtmlContent(createHyperLink("&gt;", constructActionURL(ACTION_SHOW_DIR_NAME, cachedDirectoryEntry.getFullPath(), thumbnailPageNumber + 1), null));
+            addHtmlContent(createHyperLink("&gt;", constructActionURL(ACTION_URL_SHOW_DIRECTORY, cachedDirectoryEntry.getFullPath(), thumbnailPageNumber + 1), null));
         }
         addHtmlContent("</td></tr></table>");
+    }
+
+    /**
+     * Construct an action URL string, of the format action?path=pathValue
+     *
+     * @param action             The base action URL
+     * @param pathParameterValue The value to use for the path parameter.
+     * @return The constructed string.
+     */
+    private String constructTargetURL(String action, String pathParameterValue) {
+        return MessageFormat.format("{0}?{1}={2}", action, PARAMETER_PATH, pathParameterValue);
+    }
+
+    /**
+     * Construct an action URL string, of the format action?path=pathValue
+     *
+     * @param action              The base action URL
+     * @param pathParameterValue  The value to use for the path parameter.
+     * @param thumbnailPageNumber The thumbnail page number to include in the constructed URL
+     * @return The constructed string.
+     */
+    private String constructActionURL(String action, String pathParameterValue, int thumbnailPageNumber) {
+        return MessageFormat.format("{0}?{3}={4}&{1}={2}", action, PARAMETER_PATH, pathParameterValue,
+                PARAMETER_PAGE_NUMBER, String.valueOf(thumbnailPageNumber));
+    }
+
+    /**
+     * Create a hyperlink string.
+     *
+     * @param name    The text to use in the hyperlink.
+     * @param url     The URL to display.
+     * @param altText The alt-text to use, if relevant.
+     */
+    private String createHyperLink(String name, String url, String altText) {
+        String htmlHyperLink;
+        if (altText != null) {
+            htmlHyperLink = MessageFormat.format("<a href=\"{1}\" alt=\"{2}\">{0}</a>", name, url, altText);
+        } else {
+            htmlHyperLink = MessageFormat.format("<a href=\"{1}\">{0}</a>", name, url);
+        }
+        return htmlHyperLink;
+    }
+
+    /**
+     * Construct an img tag.
+     *
+     * @param sourceURL The url to use in the source.
+     * @param width     The width of the image.
+     * @param height    The height of the image.
+     * @return The text of an image.
+     */
+    private String createImage(String sourceURL, int width, int height, String altText) {
+        String result = MessageFormat.format("<img src=\"{0}\" width=\"{1}\" ", sourceURL, String.valueOf(width));
+        if (altText != null) {
+            result += MessageFormat.format(" alt height=\"{0}\"", altText);
+        }
+        result += "/>";
+        return result;
+    }
+
+    /**
+     * Add a separator to the content.
+     */
+    public void addSeparator() {
+        addHtmlContent(getResourceText(R.string.html_separator));
+    }
+
+    /**
+     * Add a break newline to the HTML content.
+     */
+    public void addHtmlNewline() {
+        addHtmlContent("<br/>");
     }
 
     /**

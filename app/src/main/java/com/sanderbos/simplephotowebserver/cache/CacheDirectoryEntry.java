@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -41,9 +40,9 @@ public class CacheDirectoryEntry {
     private List<CacheDirectoryEntry> subDirectoryList;
 
     /**
-     * All cached directory entries share the same map of all found cached directories.
+     * All cached entries share the same cache registry.
      */
-    private Map<File, CacheDirectoryEntry> cachedDirectories;
+    private CacheRegistry cache;
 
     /**
      * The list of media files in this directory.
@@ -53,17 +52,17 @@ public class CacheDirectoryEntry {
     /**
      * Constructor for a new cached directory entry.
      *
-     * @param directory         The directory file to represent in this object.
-     * @param cachedDirectories The shared map of all cached directories.
+     * @param directory The directory file to represent in this object.
+     * @param cache A shared registry of all cached directories and files.
      */
-    public CacheDirectoryEntry(File directory, Map<File, CacheDirectoryEntry> cachedDirectories) {
+    public CacheDirectoryEntry(File directory, CacheRegistry cache) {
         this.path = directory.getAbsolutePath();
         this.name = directory.getName();
-        this.cachedDirectories = cachedDirectories;
+        this.cache = cache;
 
         // This is the logical place to do the registration, to ensure it happens early
         // and it only has to happen once.
-        cachedDirectories.put(directory, this);
+        this.cache.registerDirectory(this);
 
         initializeSubdirectories();
     }
@@ -79,12 +78,10 @@ public class CacheDirectoryEntry {
             File directory = new File(path);
             File[] subDirectories = directory.listFiles(new DirectoryFilter());
             for (File subDirectory : subDirectories) {
-                CacheDirectoryEntry subDirectoryEntry;
-                if (!cachedDirectories.containsKey(subDirectory)) {
-                    subDirectoryEntry = new CacheDirectoryEntry(subDirectory, cachedDirectories);
-                } else {
-                    // Sub directory already cached, but still add it to the list here.
-                    subDirectoryEntry = cachedDirectories.get(subDirectory);
+                String subDirectoryPath = subDirectory.getAbsolutePath();
+                CacheDirectoryEntry subDirectoryEntry = cache.getCachedDirectory(subDirectoryPath);
+                if (subDirectoryEntry == null) {
+                    subDirectoryEntry = new CacheDirectoryEntry(subDirectory, cache);
                 }
                 subDirectoryList.add(subDirectoryEntry);
             }
@@ -102,7 +99,7 @@ public class CacheDirectoryEntry {
             File[] files = directory.listFiles(new MediaFileFilter());
             for (File file : files) {
                 if (file.isFile() && hasKnownExtension(file)) {
-                    fileList.add(new CacheFileEntry(file));
+                    fileList.add(new CacheFileEntry(file, cache));
                 }
             }
             Collections.sort(fileList, new ModificationDateComparator());

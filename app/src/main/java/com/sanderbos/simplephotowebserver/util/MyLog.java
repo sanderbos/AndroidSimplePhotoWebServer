@@ -1,6 +1,9 @@
 package com.sanderbos.simplephotowebserver.util;
 
+import android.os.Message;
 import android.util.Log;
+
+import java.text.MessageFormat;
 
 /**
  * Simple logging wrapper to allow for easy extension.
@@ -58,4 +61,12 @@ public class MyLog {
         Log.e(TAG, message, throwable);
     }
 
+    /**
+     * Log an error message, with a template and arguments.
+     * @param messageTemplate The message template in MessageFormat style.
+     * @param arguments The arguments for the error message.
+     */
+    public static void error(String messageTemplate, Object... arguments) {
+        error(MessageFormat.format(messageTemplate, arguments));
+    }
 }

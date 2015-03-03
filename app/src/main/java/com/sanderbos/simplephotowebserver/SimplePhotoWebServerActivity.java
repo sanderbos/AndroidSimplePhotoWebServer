@@ -47,6 +47,7 @@ public class SimplePhotoWebServerActivity extends ActionBarActivity {
 
     /**
      * onCreate implementation, get references to screen items and set up initial state.
+     *
      * @param savedInstanceState Previous state of activity.
      */
     @Override
@@ -65,6 +66,7 @@ public class SimplePhotoWebServerActivity extends ActionBarActivity {
 
     /**
      * onCreateOptionsMenu implementation.
+     *
      * @param menu Reference to menu.
      * @return Return false to not show menu initially.
      */
@@ -77,6 +79,7 @@ public class SimplePhotoWebServerActivity extends ActionBarActivity {
 
     /**
      * onOptionsItemSelected implementation.
+     *
      * @param item The menu item being clicked.
      * @return True in case menu item selection has been consumed.
      */
@@ -115,6 +118,7 @@ public class SimplePhotoWebServerActivity extends ActionBarActivity {
 
     /**
      * Handler for click of start button, start the web server.
+     *
      * @param view The button clicked.
      */
     public void onStartButtonClicked(View view) {
@@ -124,6 +128,7 @@ public class SimplePhotoWebServerActivity extends ActionBarActivity {
 
     /**
      * Handler for click of stop button, stop the web server.
+     *
      * @param view The button clicked.
      */
     public void onStopButtonClicked(View view) {
@@ -132,6 +137,7 @@ public class SimplePhotoWebServerActivity extends ActionBarActivity {
 
     /**
      * Start the web server in the background.
+     *
      * @return Whether the web server was started (currently always true).
      */
     private boolean startWebServer() {
@@ -151,6 +157,7 @@ public class SimplePhotoWebServerActivity extends ActionBarActivity {
 
     /**
      * Stop the web server, if one is running  in the background.
+     *
      * @return Whether the web server was stopped (currently always true).
      */
     private boolean stopWebServer() {
@@ -195,18 +202,20 @@ public class SimplePhotoWebServerActivity extends ActionBarActivity {
 
     /**
      * Construct the URL by which the web server is accessible.
+     *
      * @return The public URL, or null in case there is not currently a web server running.
      */
     private String getPublicURL() {
         String result = null;
         if (NetworkUtil.isWifiEnabled(this) && isWebServerRunning()) {
-            result = MessageFormat.format("http://{0}:{1,number,#}/", NetworkUtil.getLocalIpAddress(this), internalWebServer.getListeningPort());
+            result = MessageFormat.format("http://{0}:{1}/", NetworkUtil.getLocalIpAddress(this), String.valueOf(internalWebServer.getListeningPort()));
         }
         return result;
     }
 
     /**
      * Determine from the internalWebServer field whether a web server background thread is currently running.
+     *
      * @return True in case a web server thread is currently running in the background, false if it is not.
      */
     private boolean isWebServerRunning() {
