@@ -2,6 +2,12 @@ package com.sanderbos.simplephotowebserver;
 
 import android.app.Activity;
 
+import com.sanderbos.simplephotowebserver.cache.CacheDirectoryEntry;
+import com.sanderbos.simplephotowebserver.cache.CacheFileEntry;
+
+import java.text.MessageFormat;
+import java.util.List;
+
 
 /**
  * String based simple HTML templating, constructing a string containing a HTML document.
@@ -9,6 +15,16 @@ import android.app.Activity;
  * Performs string replacement based on ||keyword||.
  */
 public class HtmlTemplateProcessor {
+
+    /** Url path parameter name. */
+    public static final String PATH_PARAM_NAME = "path";
+
+    /** Url directory parameter name. */
+    public static final String ACTION_SHOW_DIR_NAME = "/showDir";
+
+    /** Url photo action name. */
+    public static final String ACTION_SHOW_PHOTO_NAME = "/showPhoto";
+
 
     /**
      * Keywords in the templates have the format ||keyword||
@@ -53,6 +69,8 @@ public class HtmlTemplateProcessor {
     public HtmlTemplateProcessor(Activity context) {
         this.content = new StringBuilder();
         this.context = context;
+
+        this.title = getResourceText(R.string.title_regular);
     }
 
     /**
@@ -84,6 +102,16 @@ public class HtmlTemplateProcessor {
     }
 
     /**
+     * Set a 500 title based on a URI
+     *
+     * @param uri The uri to use in the 500 title.
+     */
+    public void set500Title(String uri) {
+        String titleTemplate = getResourceText(R.string.title_500);
+        setTitle(replaceTemplateVariable(titleTemplate, KEYWORD_URI, uri));
+    }
+
+    /**
      * Get the html templating output.
      *
      * @return A string representing an HTML document.
@@ -94,6 +122,98 @@ public class HtmlTemplateProcessor {
         result = replaceTemplateVariable(result, KEYWORD_TITLE, getTitle());
         result = replaceTemplateVariable(result, KEYWORD_CONTENT, content.toString());
         return result;
+    }
+
+    /**
+     * Add a separator to the content.
+     */
+    public void addSeparator() {
+        addStringContent(getResourceText(R.string.html_separator));
+    }
+
+    /**
+     * Add a break newline to the HTML content.
+     */
+    public void addHtmlNewline() {
+        addStringContent("<br/>");
+    }
+
+    /**
+     * Generate a directory structure HTML tree.
+     * @param cachedDirectoryEntry The root directory to generate a tree for.
+     */
+    public void addDirectoryTree(CacheDirectoryEntry cachedDirectoryEntry) {
+        addStringContent("<ul>");
+        createDirectoryTreeRecursive(cachedDirectoryEntry);
+        addStringContent("</ul>");
+    }
+
+    /**
+     * Generate a directory structure HTML tree. This is a recursive method, in case there are
+     * sub directories a tree is created for those as well.
+     * @param cachedDirectoryEntry The directory to add an item for.
+     */
+    private void createDirectoryTreeRecursive(CacheDirectoryEntry cachedDirectoryEntry) {
+        String name = cachedDirectoryEntry.getName();
+        String path = cachedDirectoryEntry.getFullPath();
+        String url = constructActionURL(ACTION_SHOW_DIR_NAME, path);
+        addStringContent("<li>");
+        addHyperLink(name, url, null);
+        addStringContent("</li>");
+        List<CacheDirectoryEntry> subDirectories = cachedDirectoryEntry.getSubDirectoryList();
+        if (subDirectories.size() > 0) {
+            addStringContent("<ul>");
+            for (CacheDirectoryEntry subDirectoryEntry: subDirectories) {
+                createDirectoryTreeRecursive(subDirectoryEntry);
+            }
+            addStringContent("</ul>");
+        }
+    }
+
+    /**
+     * Construct an action URL string, of the format action?path=pathValue
+     * @param action The base action URL
+     * @param pathParameterValue The value to use for the path parameter.
+     * @return The constructed string.
+     */
+    private String constructActionURL(String action, String pathParameterValue) {
+        return MessageFormat.format("{0}?{1}={2}", action, PATH_PARAM_NAME, pathParameterValue);
+    }
+
+    /**
+     * Add a hyperlink to the output.
+     * @param name The text to use in the hyperlink.
+     * @param url The URL to display.
+     * @param altText The alt-text to use, if relevant.
+     */
+    private void addHyperLink(String name, String url, String altText) {
+        String htmlHyperLink;
+        if (altText != null) {
+            htmlHyperLink = MessageFormat.format("<a href=\"{1}\" alt=\"{2}\">{0}</a>", name, url, altText);
+        } else {
+            htmlHyperLink = MessageFormat.format("<a href=\"{1}\">{0}</a>", name, url);
+        }
+        addStringContent(htmlHyperLink);
+    }
+
+    /**
+     * List the directory contents, as a set of thumbnails.
+     * @param cachedDirectoryEntry
+     */
+    public void addDirectoryContentsAsThumbnails(CacheDirectoryEntry cachedDirectoryEntry) {
+        List<CacheFileEntry> fileEntries = cachedDirectoryEntry.getFileList();
+        for (CacheFileEntry fileEntry: fileEntries) {
+            addHyperLink(fileEntry.getPath(), constructActionURL(ACTION_SHOW_PHOTO_NAME, fileEntry.getPath()), null);
+            addHtmlNewline();
+        }
+    }
+
+    /**
+     * Add text to the main HTML content.
+     * @param contentFragment The content to add.
+     */
+    private void addStringContent(String contentFragment) {
+        content.append(contentFragment + "\n");
     }
 
     /**

@@ -2,31 +2,34 @@
 <resources>
     <string name="html_main_template">
         <![CDATA[
-            <!doctype html>
-            <html>
-                <head>
-                    <title>||title||</title>
-                    <link rel="stylesheet" href="/default_style.css" type="text/css"></link>
-                </head>
-                <body>
-                    <div class="main-container">
-                        <h1>||title||</h1>
+            <!doctype html>\n
+            <html>\n
+                <head>\n
+                    <title>||title||</title>\n
+                    <link rel="stylesheet" href="/default_style.css" type="text/css"></link>\n
+                </head>\n
+                <body>\n
+                    <div class="main-container">\n
+                        <h3>||title||</h3>\n
                         ||content||
-                    </div>
-                </body>
-            </html>
+                    \n</div>\n
+                </body>\n
+            </html>\n
         ]]>
     </string>
     <string name="default_css">
         <![CDATA[
-            body {font-family:Arial, sans-serif; background: #D9D9D9;}
-            table { margin: 1em; border-collapse: collapse; }
-            td, th { padding: .3em; border: 0px #ccc solid; vertical-align: top }
-            .main-container {margin: 30px 30px 30px 30px; width: 600px; background: #D3D3D3; padding: 20px;}
-            a {color: black;}
-            a:visited {color: black;}
+            body { font-family:Arial, sans-serif; background: #D9D9D9; }\n
+            table { margin: 1em; border-collapse: collapse; }\n
+            td, th { padding: .3em; border: 0px #ccc solid; vertical-align: top }\n
+            .main-container {margin: 30px 30px 30px 30px; width: 600px; background: #D3D3D3; padding: 20px;}\n
+            a {color: black;}\n
+            a:visited {color: black;}\n
         ]]>
     </string>
+    <string name="title_regular">Simple Photo Web Server</string>
     <string name="title_404">404 Not found: ||uri|| was not found</string>
+    <string name="title_500">500 Error processing request: Cannot process \'||uri||\'</string>
+    <string name="html_separator"><![CDATA[ <hr></hr> ]]></string>
 
 </resources>

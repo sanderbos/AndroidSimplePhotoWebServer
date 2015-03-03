@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.TextView;
 
@@ -175,17 +176,20 @@ public class SimplePhotoWebServerActivity extends ActionBarActivity {
             urlTextView.setText("");
             startButton.setEnabled(false);
             stopButton.setEnabled(false);
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         } else if (isWebServerRunning()) {
             String publicURL = getPublicURL();
             statusTextView.setText(getResources().getText(R.string.msg_server_running));
             urlTextView.setText(publicURL);
             startButton.setEnabled(false);
             stopButton.setEnabled(true);
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         } else {
             statusTextView.setText(getResources().getText(R.string.msg_server_not_running));
             urlTextView.setText("");
             startButton.setEnabled(true);
             stopButton.setEnabled(false);
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         }
     }
 
