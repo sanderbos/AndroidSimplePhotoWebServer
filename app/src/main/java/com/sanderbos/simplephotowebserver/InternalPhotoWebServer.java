@@ -60,7 +60,7 @@ public class InternalPhotoWebServer extends NanoHTTPD {
         if ("/default_style.css".equals(uri)) {
             return getDefaultCssReponse();
         } else if ("/".equals(uri)) {
-            return showRootDirectories();
+            return displayDirectoryContentAsHtml(null);
         } else if (HtmlTemplateProcessor.ACTION_SHOW_DIR_NAME.equals(uri)) {
             return showDirectory(httpRequest, httpRequest.getParms().get("path"));
         } else {
@@ -84,47 +84,47 @@ public class InternalPhotoWebServer extends NanoHTTPD {
             if (!directory.exists()) {
                 response = get404Response(path);
             } else {
-                List<String> directories = new ArrayList<>();
-                directories.add(path);
-                return showDirectoryContent(directories);
+                return displayDirectoryContentAsHtml(path);
             }
         }
         return response;
-    }
-
-    /**
-     * Show the starting page with the top level image directories configured.
-     * @return The response html page.
-     */
-    private Response showRootDirectories() {
-        List<String> directories = new ArrayList<>();
-        directories.add(TEMP_IMAGES_PATH);
-        return showDirectoryContent(directories);
     }
 
     /**
      * Generate a html response page for a list of directories. If there is only one directory
      * involved its images are also listed.
-     * @param directories The directories to generate a page for.
+     * @param currentPath The currently shown directory that is also the path to highlight in the directory tree, can be null.
      * @return The response html page.
      */
-    private Response showDirectoryContent(List<String> directories) {
+    private Response displayDirectoryContentAsHtml(String currentPath) {
         HtmlTemplateProcessor htmlOutput = new HtmlTemplateProcessor(context);
+        List<String> directories = new ArrayList<>();
+        directories.add(TEMP_IMAGES_PATH);
+
+        CacheDirectoryEntry currentPathCachedDirectory;
+        if (currentPath == null) {
+            currentPathCachedDirectory = null;
+        } else {
+            currentPathCachedDirectory = getOrRetrieveCachedDirectory(new File(currentPath));
+        }
+
         for (String directoryPath: directories) {
             File directory = new File(directoryPath);
             if (directory.exists()) {
                 CacheDirectoryEntry cachedDirectoryEntry = getOrRetrieveCachedDirectory(directory);
-                htmlOutput.addDirectoryTree(cachedDirectoryEntry);
+                htmlOutput.createDirectoryTree(cachedDirectoryEntry, currentPathCachedDirectory);
 
-                // If there is exactly one base directory being listed, also show the filed in it.
-                if (directories.size() == 1) {
-                    htmlOutput.addSeparator();
-                    htmlOutput.addDirectoryContentsAsThumbnails(cachedDirectoryEntry);
-                }
             }
         }
-        Response response = new NanoHTTPD.Response(htmlOutput.getHtmlOutput());
-        return response;
+
+        // If a directory is selected, show its contents as thumbnails.
+        htmlOutput.addSeparator();
+        if (currentPathCachedDirectory != null) {
+            htmlOutput.addDirectoryContentsAsThumbnails(currentPathCachedDirectory);
+            htmlOutput.addSeparator();
+        }
+
+        return new NanoHTTPD.Response(htmlOutput.getHtmlOutput());
     }
 
     /**

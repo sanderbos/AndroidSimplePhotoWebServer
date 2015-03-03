@@ -16,13 +16,19 @@ import java.util.List;
  */
 public class HtmlTemplateProcessor {
 
-    /** Url path parameter name. */
+    /**
+     * Url path parameter name.
+     */
     public static final String PATH_PARAM_NAME = "path";
 
-    /** Url directory parameter name. */
+    /**
+     * Url directory parameter name.
+     */
     public static final String ACTION_SHOW_DIR_NAME = "/showDir";
 
-    /** Url photo action name. */
+    /**
+     * Url photo action name.
+     */
     public static final String ACTION_SHOW_PHOTO_NAME = "/showPhoto";
 
 
@@ -140,31 +146,39 @@ public class HtmlTemplateProcessor {
 
     /**
      * Generate a directory structure HTML tree.
-     * @param cachedDirectoryEntry The root directory to generate a tree for.
+     *
+     * @param cachedDirectoryEntry      The root directory to generate a tree for.
+     * @param directoryEntryToHighlight The directory entry to highlight in the tree.
      */
-    public void addDirectoryTree(CacheDirectoryEntry cachedDirectoryEntry) {
+    public void createDirectoryTree(CacheDirectoryEntry cachedDirectoryEntry, CacheDirectoryEntry directoryEntryToHighlight) {
         addStringContent("<ul>");
-        createDirectoryTreeRecursive(cachedDirectoryEntry);
+        createDirectoryTreeRecursive(cachedDirectoryEntry, directoryEntryToHighlight);
         addStringContent("</ul>");
     }
 
     /**
      * Generate a directory structure HTML tree. This is a recursive method, in case there are
      * sub directories a tree is created for those as well.
+     *
      * @param cachedDirectoryEntry The directory to add an item for.
+     * @param directoryEntryToHighlight The directory entry to highlight in the tree.
      */
-    private void createDirectoryTreeRecursive(CacheDirectoryEntry cachedDirectoryEntry) {
+    private void createDirectoryTreeRecursive(CacheDirectoryEntry cachedDirectoryEntry, CacheDirectoryEntry directoryEntryToHighlight) {
         String name = cachedDirectoryEntry.getName();
         String path = cachedDirectoryEntry.getFullPath();
         String url = constructActionURL(ACTION_SHOW_DIR_NAME, path);
         addStringContent("<li>");
-        addHyperLink(name, url, null);
+        String hyperlink = createHyperLink(name, url, null);
+        if (cachedDirectoryEntry.equals(directoryEntryToHighlight)) {
+            hyperlink = "<b>" + hyperlink + "</b>";
+        }
+        addStringContent(hyperlink);
         addStringContent("</li>");
         List<CacheDirectoryEntry> subDirectories = cachedDirectoryEntry.getSubDirectoryList();
         if (subDirectories.size() > 0) {
             addStringContent("<ul>");
-            for (CacheDirectoryEntry subDirectoryEntry: subDirectories) {
-                createDirectoryTreeRecursive(subDirectoryEntry);
+            for (CacheDirectoryEntry subDirectoryEntry : subDirectories) {
+                createDirectoryTreeRecursive(subDirectoryEntry, directoryEntryToHighlight);
             }
             addStringContent("</ul>");
         }
@@ -172,7 +186,8 @@ public class HtmlTemplateProcessor {
 
     /**
      * Construct an action URL string, of the format action?path=pathValue
-     * @param action The base action URL
+     *
+     * @param action             The base action URL
      * @param pathParameterValue The value to use for the path parameter.
      * @return The constructed string.
      */
@@ -181,39 +196,43 @@ public class HtmlTemplateProcessor {
     }
 
     /**
-     * Add a hyperlink to the output.
-     * @param name The text to use in the hyperlink.
-     * @param url The URL to display.
+     * Create a hyperlink string.
+     *
+     * @param name    The text to use in the hyperlink.
+     * @param url     The URL to display.
      * @param altText The alt-text to use, if relevant.
      */
-    private void addHyperLink(String name, String url, String altText) {
+    private String createHyperLink(String name, String url, String altText) {
         String htmlHyperLink;
         if (altText != null) {
             htmlHyperLink = MessageFormat.format("<a href=\"{1}\" alt=\"{2}\">{0}</a>", name, url, altText);
         } else {
             htmlHyperLink = MessageFormat.format("<a href=\"{1}\">{0}</a>", name, url);
         }
-        addStringContent(htmlHyperLink);
+        return htmlHyperLink;
     }
 
     /**
      * List the directory contents, as a set of thumbnails.
-     * @param cachedDirectoryEntry
+     *
+     * @param cachedDirectoryEntry The directory whose content to show.
      */
     public void addDirectoryContentsAsThumbnails(CacheDirectoryEntry cachedDirectoryEntry) {
         List<CacheFileEntry> fileEntries = cachedDirectoryEntry.getFileList();
-        for (CacheFileEntry fileEntry: fileEntries) {
-            addHyperLink(fileEntry.getPath(), constructActionURL(ACTION_SHOW_PHOTO_NAME, fileEntry.getPath()), null);
+        for (CacheFileEntry fileEntry : fileEntries) {
+            addStringContent(createHyperLink(fileEntry.getPath(), constructActionURL(ACTION_SHOW_PHOTO_NAME, fileEntry.getPath()), null));
             addHtmlNewline();
         }
     }
 
     /**
      * Add text to the main HTML content.
+     *
      * @param contentFragment The content to add.
      */
     private void addStringContent(String contentFragment) {
-        content.append(contentFragment + "\n");
+        content.append(contentFragment);
+        content.append("\n");
     }
 
     /**

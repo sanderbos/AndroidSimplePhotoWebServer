@@ -240,4 +240,33 @@ public class CacheDirectoryEntry {
             return first.getName().compareTo(second.getName());
         }
     }
+
+    /**
+     * Implementation of equals.
+     * @param o Other object.
+     * @return True in case the other object represents the same directory, false otherwise.
+     */
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        CacheDirectoryEntry that = (CacheDirectoryEntry) o;
+
+        if (name != null ? !name.equals(that.name) : that.name != null) return false;
+        if (path != null ? !path.equals(that.path) : that.path != null) return false;
+
+        return true;
+    }
+
+    /**
+     * Implementation of hashCode.
+     * @return The hashcode of the object, based on name and path.
+     */
+    @Override
+    public int hashCode() {
+        int result = path != null ? path.hashCode() : 0;
+        result = 31 * result + (name != null ? name.hashCode() : 0);
+        return result;
+    }
 }
