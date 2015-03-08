@@ -27,17 +27,22 @@ public class HtmlTemplateProcessor {
     public static final String PARAMETER_PAGE_NUMBER = "page";
 
     /**
-     * Url directory parameter name.
+     * Url directory page parameter name.
      */
-    public static final String ACTION_URL_SHOW_DIRECTORY = "/showDir";
+    public static final String ACTION_URL_SHOW_DIRECTORY_PAGE = "/showDirectoryPage";
 
     /**
-     * Url photo action name.
+     * Url photo page action name.
+     */
+    public static final String ACTION_URL_SHOW_PHOTO_PAGE = "/showPhotoPage";
+
+    /**
+     * Url photo action name (that displays a binary photo image).
      */
     public static final String ACTION_URL_SHOW_PHOTO = "/showPhoto";
 
     /**
-     * Url photo action name.
+     * Url photo thumbnail action name (that displays an binary image thumbnail).
      */
     public static final String ACTION_URL_SHOW_THUMBNAIL = "/showThumbnail";
 
@@ -65,12 +70,12 @@ public class HtmlTemplateProcessor {
     /**
      * The number of thumbnail rows.
      */
-    private static final int NUM_THUMBNAIL_ROWS = 3;
+    private static final int NUM_THUMBNAIL_ROWS = 2;
 
     /**
      * The number of thumbnail columns.
      */
-    private static final int NUM_THUMBNAIL_COLUMNS = 6;
+    private static final int NUM_THUMBNAIL_COLUMNS = 10;
 
     /**
      * Page size (for thumbnails).
@@ -177,7 +182,7 @@ public class HtmlTemplateProcessor {
     private void createDirectoryTreeRecursive(CacheDirectoryEntry cachedDirectoryEntry, CacheDirectoryEntry directoryEntryToHighlight) {
         String name = cachedDirectoryEntry.getName();
         String path = cachedDirectoryEntry.getFullPath();
-        String url = constructTargetURL(ACTION_URL_SHOW_DIRECTORY, path);
+        String url = constructTargetURL(ACTION_URL_SHOW_DIRECTORY_PAGE, path);
         addHtmlContent("<li>");
         String hyperlink = createHyperLink(name, url, null);
         if (cachedDirectoryEntry.equals(directoryEntryToHighlight)) {
@@ -199,17 +204,18 @@ public class HtmlTemplateProcessor {
      * List the directory contents, as a set of thumbnails.
      *
      * @param cachedDirectoryEntry The directory whose content to show.
-     * @param thumbnailPageNumber  The page number of thumbnails to display.
+     * @param requestState         The request being displayed.
      */
-    public void addDirectoryContentsAsThumbnails(CacheDirectoryEntry cachedDirectoryEntry, int thumbnailPageNumber) {
+    public void addDirectoryContentsAsThumbnails(CacheDirectoryEntry cachedDirectoryEntry, MediaRequestState requestState) {
         List<CacheFileEntry> fileEntries = cachedDirectoryEntry.getFileList();
+        int thumbnailPageNumber = requestState.getCurrentThumbnailPage();
         if (thumbnailPageNumber < 0) {
             thumbnailPageNumber = 0;
         }
 
         addHtmlContent("<table><tr><td>");
         if (thumbnailPageNumber > 0) {
-            addHtmlContent(createHyperLink("&lt;", constructActionURL(ACTION_URL_SHOW_DIRECTORY, cachedDirectoryEntry.getFullPath(), thumbnailPageNumber - 1), null));
+            addHtmlContent(createHyperLink("&lt;", constructTargetURL(ACTION_URL_SHOW_DIRECTORY_PAGE, cachedDirectoryEntry.getFullPath(), thumbnailPageNumber - 1), null));
         }
         addHtmlContent("</td><td>");
 
@@ -231,11 +237,8 @@ public class HtmlTemplateProcessor {
 
             if (index < fileEntries.size()) {
                 CacheFileEntry fileEntry = fileEntries.get(index);
-                addHtmlContent("<td class=\"thumbnail-cell-regular\">");
-                String imageTag = createImage(constructTargetURL(ACTION_URL_SHOW_THUMBNAIL, fileEntry.getFullPath()), "image-thumbnail", null);
-                String imageTagWithHyperLink = createHyperLink(imageTag, constructTargetURL(ACTION_URL_SHOW_PHOTO, fileEntry.getFullPath()), null);
-                addHtmlContent(imageTagWithHyperLink);
-                addHtmlContent("</td>");
+                boolean isSelectedImage = fileEntry.getFullPath().equals((requestState.getCurrentImagePath()));
+                addThumbnailHtml(fileEntry, isSelectedImage);
             }
         }
         addHtmlContent("</tr></table>");
@@ -243,9 +246,51 @@ public class HtmlTemplateProcessor {
         addHtmlContent("</td><td>");
         if (index < fileEntries.size()) {
             // There are more entries beyond the ones now shown.
-            addHtmlContent(createHyperLink("&gt;", constructActionURL(ACTION_URL_SHOW_DIRECTORY, cachedDirectoryEntry.getFullPath(), thumbnailPageNumber + 1), null));
+            addHtmlContent(createHyperLink("&gt;", constructTargetURL(ACTION_URL_SHOW_DIRECTORY_PAGE, cachedDirectoryEntry.getFullPath(), thumbnailPageNumber + 1), null));
         }
         addHtmlContent("</td></tr></table>");
+    }
+
+    /**
+     * Add the image HTML for an image.
+     *
+     * @param imagePath         The full path of an image to show.
+     * @param previousImagePath The full path of a previous image in the list, if such an image exists.
+     * @param nextImagePath     The full path of a next image in the list, if such an image exists.
+     */
+    public void addMainImageHtml(String imagePath, String previousImagePath, String nextImagePath) {
+        addHtmlContent("<table><tr><td>");
+        if (previousImagePath != null) {
+            addHtmlContent(createHyperLink("&lt;", constructTargetURL(ACTION_URL_SHOW_PHOTO_PAGE, previousImagePath), null));
+        }
+        addHtmlContent("</td><td>");
+        String imageTag = createImage(constructTargetURL(ACTION_URL_SHOW_PHOTO, imagePath), "image-main-regular", null);
+        addHtmlContent(imageTag);
+        addHtmlContent("</td><td>");
+        if (nextImagePath != null) {
+            addHtmlContent(createHyperLink("&gt;", constructTargetURL(ACTION_URL_SHOW_PHOTO_PAGE, nextImagePath), null));
+        }
+        addHtmlContent("</td></tr></table>");
+    }
+
+    /**
+     * Create and add the HTML for one thumbnail cell.
+     *
+     * @param fileEntry       The file entry to show the thumbail for.
+     * @param isSelectedImage Whether this image is the currently selected image or not.
+     */
+    private void addThumbnailHtml(CacheFileEntry fileEntry, boolean isSelectedImage) {
+        String cellCssClass;
+        if (isSelectedImage) {
+            cellCssClass = "thumbnail-cell-selected";
+        } else {
+            cellCssClass = "thumbnail-cell-regular";
+        }
+        addHtmlContent("<td class=\"" + cellCssClass + "\">");
+        String imageTag = createImage(constructTargetURL(ACTION_URL_SHOW_THUMBNAIL, fileEntry.getThumbnailPath()), "image-thumbnail", null);
+        String imageTagWithHyperLink = createHyperLink(imageTag, constructTargetURL(ACTION_URL_SHOW_PHOTO_PAGE, fileEntry.getFullPath()), null);
+        addHtmlContent(imageTagWithHyperLink);
+        addHtmlContent("</td>");
     }
 
     /**
@@ -267,7 +312,7 @@ public class HtmlTemplateProcessor {
      * @param thumbnailPageNumber The thumbnail page number to include in the constructed URL
      * @return The constructed string.
      */
-    private String constructActionURL(String action, String pathParameterValue, int thumbnailPageNumber) {
+    private String constructTargetURL(String action, String pathParameterValue, int thumbnailPageNumber) {
         return MessageFormat.format("{0}?{3}={4}&{1}={2}", action, PARAMETER_PATH, pathParameterValue,
                 PARAMETER_PAGE_NUMBER, String.valueOf(thumbnailPageNumber));
     }
@@ -275,9 +320,9 @@ public class HtmlTemplateProcessor {
     /**
      * Create a hyperlink string.
      *
-     * @param linkContent    The text or html fragment to place within the hyperlink.
-     * @param url     The URL to display.
-     * @param altText The alt-text to use, if relevant.
+     * @param linkContent The text or html fragment to place within the hyperlink.
+     * @param url         The URL to display.
+     * @param altText     The alt-text to use, if relevant.
      */
     private String createHyperLink(String linkContent, String url, String altText) {
         String htmlHyperLink;

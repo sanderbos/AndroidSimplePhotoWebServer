@@ -12,9 +12,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.text.MessageFormat;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import fi.iki.elonen.NanoHTTPD;
 
@@ -40,6 +38,11 @@ public class InternalPhotoWebServer extends NanoHTTPD {
     private CacheRegistry cacheRegistry;
 
     /**
+     * List of top level directories, starting point into the cacheRegistry.
+     */
+    private List<CacheDirectoryEntry> topLevelDirectories = null;
+
+    /**
      * Constructor.
      *
      * @param port    The listening port for the web server.
@@ -60,18 +63,25 @@ public class InternalPhotoWebServer extends NanoHTTPD {
     @Override
     public Response serve(IHTTPSession httpRequest) {
 
+        initializeCachedDirectories();
+
         String uri = httpRequest.getUri();
         Response response;
-        if ("/default_style.css".equals(uri)) {
-            return getDefaultCssReponse();
-        } else if ("/".equals(uri)) {
-            return displayDirectoryContentAsHtml(null, -1);
-        } else if (HtmlTemplateProcessor.ACTION_URL_SHOW_DIRECTORY.equals(uri)) {
-            return showDirectory(httpRequest, httpRequest.getParms().get(HtmlTemplateProcessor.PARAMETER_PATH), getPageNumber(httpRequest));
-        } else if (HtmlTemplateProcessor.ACTION_URL_SHOW_THUMBNAIL.equals(uri)) {
-            return displayThumbnail(httpRequest.getParms().get(HtmlTemplateProcessor.PARAMETER_PATH), httpRequest);
-        } else {
-            response = get404Response(httpRequest.getUri(), httpRequest);
+        switch (uri) {
+            case "/default_style.css":
+                return getDefaultCssReponse();
+            case "/":
+                return displayPhotoPageAsHtml(null);
+            case HtmlTemplateProcessor.ACTION_URL_SHOW_DIRECTORY_PAGE:
+            case HtmlTemplateProcessor.ACTION_URL_SHOW_PHOTO_PAGE:
+                return showMediaPage(httpRequest);
+            case HtmlTemplateProcessor.ACTION_URL_SHOW_THUMBNAIL:
+                return displayImage(httpRequest.getParms().get(HtmlTemplateProcessor.PARAMETER_PATH), httpRequest, true);
+            case HtmlTemplateProcessor.ACTION_URL_SHOW_PHOTO:
+                return displayImage(httpRequest.getParms().get(HtmlTemplateProcessor.PARAMETER_PATH), httpRequest, false);
+            default:
+                response = get404Response(uri, httpRequest);
+                break;
         }
         return response;
     }
@@ -79,12 +89,13 @@ public class InternalPhotoWebServer extends NanoHTTPD {
     /**
      * Serve the thumbnail image to the web client.
      *
-     * @param imagePath   The path to the image (which is not the path to the thumbnail, but to
-     *                    the actual image).
-     * @param httpRequest The context HTTP-request.
+     * @param imagePath     The path to the image (which is not the path to the thumbnail, but to
+     *                      the actual image).
+     * @param httpRequest   The context HTTP-request.
+     * @param showThumbnail Whether or not to show the regular image (false) or its thumbnail (true).
      * @return The http response (either the image, or an error page that is never seen).
      */
-    private Response displayThumbnail(String imagePath, IHTTPSession httpRequest) {
+    private Response displayImage(String imagePath, IHTTPSession httpRequest, boolean showThumbnail) {
         Response response;
         if (imagePath == null) {
             response = get500Response(httpRequest);
@@ -94,7 +105,12 @@ public class InternalPhotoWebServer extends NanoHTTPD {
                 // Then we have to create and register it here and now.
                 cachedFileEntry = new CacheFileEntry(new File(imagePath), cacheRegistry);
             }
-            String pathToServe = cachedFileEntry.getThumbnailPath();
+            String pathToServe;
+            if (showThumbnail) {
+                pathToServe = cachedFileEntry.getThumbnailPath();
+            }  else {
+                pathToServe = cachedFileEntry.getFullPath();
+            }
             try {
                 FileInputStream fileStream = new FileInputStream(pathToServe);
                 response = new Response(Response.Status.OK, getMimeType(pathToServe), fileStream);
@@ -108,6 +124,7 @@ public class InternalPhotoWebServer extends NanoHTTPD {
 
     /**
      * Get a mime-type for a path, based on extension.
+     *
      * @param path The path to get the mime type for.
      * @return The mime type, or 'application/unknown' if it is not known.
      */
@@ -115,16 +132,24 @@ public class InternalPhotoWebServer extends NanoHTTPD {
         String mimeType = "application/unknown";
         if (path != null && path.lastIndexOf('.') != -1) {
             String extension = path.substring(path.lastIndexOf('.') + 1).toLowerCase();
-            if (extension.equals("jpg") || extension.equals("jpeg")) {
-                mimeType = "image/jpeg";
-            } else if (extension.equals("png")) {
-                mimeType = "image/png";
-            } else if (extension.equals("gif")) {
-                mimeType = "image/gif";
-            } else if (extension.equals("html") || extension.equals("htm") ) {
-                mimeType = "text/html";
-            } else if (extension.equals("css")) {
-                mimeType = "text/css";
+            switch (extension) {
+                case "jpg":
+                case "jpeg":
+                    mimeType = "image/jpeg";
+                    break;
+                case "png":
+                    mimeType = "image/png";
+                    break;
+                case "gif":
+                    mimeType = "image/gif";
+                    break;
+                case "html":
+                case "htm":
+                    mimeType = "text/html";
+                    break;
+                case "css":
+                    mimeType = "text/css";
+                    break;
             }
         }
         return mimeType;
@@ -133,63 +158,111 @@ public class InternalPhotoWebServer extends NanoHTTPD {
     /**
      * Generate a response with directory contents shown.
      *
-     * @param httpRequest         The context request.
-     * @param path                The path to show, if null a 500 page is generated.
-     * @param thumbnailPageNumber The current page number is available (set to zero or -1 if not available).
+     * @param httpRequest The context request.
      * @return The response html page.
      */
-    private Response showDirectory(IHTTPSession httpRequest, String path, int thumbnailPageNumber) {
+    private Response showMediaPage(IHTTPSession httpRequest) {
         Response response;
+        String path = httpRequest.getParms().get(HtmlTemplateProcessor.PARAMETER_PATH);
         if (path == null) {
             response = get500Response(httpRequest);
         } else {
-            File directory = new File(path);
-            if (!directory.exists()) {
+            File file = new File(path);
+            if (!file.exists()) {
                 response = get404Response(path, httpRequest);
             } else {
-                return displayDirectoryContentAsHtml(path, thumbnailPageNumber);
+                MediaRequestState currentDisplayState = extractCurrentDisplayState(httpRequest);
+                return displayPhotoPageAsHtml(currentDisplayState);
             }
         }
         return response;
     }
 
     /**
-     * Generate a html response page for a list of directories. If there is only one directory
-     * involved its images are also listed.
+     * Generate a html response page displaying thumbnails and photos. This includes:
+     * <ul>
+     * <li>The directory tree.</li>
+     * <li>If applicable, a list of thumbnails.</li>
+     * <li>If applicable, a photo.</li>
+     * </ul>
      *
-     * @param currentPath         The currently shown directory that is also the path to highlight in the directory tree, can be null.
-     * @param thumbnailPageNumber The current page number is available (set to zero or -1 if not available).
+     * @param currentDisplayState Information about the directory, page within that directory, and media-file to show.
      * @return The response html page.
      */
-    private Response displayDirectoryContentAsHtml(String currentPath, int thumbnailPageNumber) {
+    private Response displayPhotoPageAsHtml(MediaRequestState currentDisplayState) {
         HtmlTemplateProcessor htmlOutput = new HtmlTemplateProcessor(context);
-        List<String> directories = new ArrayList<>();
-        directories.add(TEMP_IMAGES_PATH);
 
         CacheDirectoryEntry currentPathCachedDirectory;
-        if (currentPath == null) {
+        if (currentDisplayState == null) {
             currentPathCachedDirectory = null;
         } else {
-            currentPathCachedDirectory = getOrRetrieveCachedDirectory(currentPath);
+            currentPathCachedDirectory = getOrRetrieveCachedDirectory(currentDisplayState.getCurrentDirectoryPath());
         }
 
-        for (String directoryPath : directories) {
-            File directory = new File(directoryPath);
-            if (directory.exists()) {
-                CacheDirectoryEntry cachedDirectoryEntry = getOrRetrieveCachedDirectory(directoryPath);
-                htmlOutput.createDirectoryTree(cachedDirectoryEntry, currentPathCachedDirectory);
-
-            }
+        for (CacheDirectoryEntry topLevelDirectory : topLevelDirectories) {
+            htmlOutput.createDirectoryTree(topLevelDirectory, currentPathCachedDirectory);
         }
 
         // If a directory is selected, show its contents as thumbnails.
         htmlOutput.addSeparator();
         if (currentPathCachedDirectory != null) {
-            htmlOutput.addDirectoryContentsAsThumbnails(currentPathCachedDirectory, thumbnailPageNumber);
+            htmlOutput.addDirectoryContentsAsThumbnails(currentPathCachedDirectory, currentDisplayState);
+            htmlOutput.addSeparator();
+        }
+
+        if (currentDisplayState != null && currentDisplayState.getCurrentImagePath() != null) {
+            String [] siblingImagePaths = getSiblingImages(currentPathCachedDirectory, currentDisplayState.getCurrentImagePath());
+            htmlOutput.addMainImageHtml(currentDisplayState.getCurrentImagePath(), siblingImagePaths[0], siblingImagePaths[1]);
             htmlOutput.addSeparator();
         }
 
         return new NanoHTTPD.Response(htmlOutput.getHtmlOutput());
+    }
+
+    private String[] getSiblingImages(CacheDirectoryEntry cachedDirectory, String imagePath) {
+        String previousImagePath = null;
+        String nextImagePath = null;
+
+        List<CacheFileEntry> fileList = cachedDirectory.getFileList();
+        for (int index = 0; index < fileList.size(); index++) {
+            CacheFileEntry fileEntry = fileList.get(index);
+            if (fileEntry.getFullPath().equals(imagePath)) {
+                if (index > 0) {
+                    previousImagePath = fileList.get(index - 1).getFullPath();
+                }
+                if (index + 1 < fileList.size()) {
+                    nextImagePath = fileList.get(index + 1).getFullPath();
+                }
+            }
+        }
+
+        String[] result = new String[2];
+        result[0] = previousImagePath;
+        result[1] = nextImagePath;
+        return result;
+    }
+
+
+    /**
+     * Set up the directory structure, needed so that other methods can expect the cache to
+     * be initialized even in case of a server restart.
+     */
+    private void initializeCachedDirectories() {
+        if (topLevelDirectories == null) {
+            topLevelDirectories = new ArrayList<>();
+
+            // Set up temporary starting point for directories
+            List<String> directories = new ArrayList<>();
+            directories.add(TEMP_IMAGES_PATH);
+
+            for (String directoryPath : directories) {
+                File directory = new File(directoryPath);
+                if (directory.exists()) {
+                    CacheDirectoryEntry cachedDirectoryEntry = getOrRetrieveCachedDirectory(directoryPath);
+                    topLevelDirectories.add(cachedDirectoryEntry);
+                }
+            }
+        }
     }
 
     /**
@@ -258,6 +331,69 @@ public class InternalPhotoWebServer extends NanoHTTPD {
     }
 
     /**
+     * Extract the image information to show from an http request.
+     * This method assumes that it has already been verified that this request represents a valid
+     * image or image directory request, error handling should have occurred before this method
+     * is called.
+     *
+     * @param httpRequest The http request to extract the information from.
+     * @return An object representing the image directory, and if present the image path
+     * and current image page.
+     */
+    private MediaRequestState extractCurrentDisplayState(IHTTPSession httpRequest) {
+        MediaRequestState result = new MediaRequestState();
+        // See if a page number is explicitly set on request, may be overridden later in case
+        // a picture is specified.
+        result.setCurrentThumbnailPage(getPageNumber(httpRequest));
+        String uri = httpRequest.getUri();
+        String path = httpRequest.getParms().get(HtmlTemplateProcessor.PARAMETER_PATH);
+        boolean pathRepresentsDirectory = HtmlTemplateProcessor.ACTION_URL_SHOW_DIRECTORY_PAGE.equals(uri);
+        if (pathRepresentsDirectory) {
+            result.setCurrentDirectoryPath(path);
+            result.setCurrentImagePath(null);
+        } else {
+            result.setCurrentImagePath(path);
+            result.setCurrentDirectoryPath(getDirectoryFromFilePath(path));
+            int extractedCurrentPage = extractCurrentThumbnailPage(path, result.getCurrentDirectoryPath());
+            if (extractedCurrentPage != -1) {
+                result.setCurrentThumbnailPage(extractedCurrentPage);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Get the parent folder of a file, using a naive implementation as all paths represented should be full paths.
+     *
+     * @param filePath The file to get the directory path from.
+     * @return The full path the the directory of filePath.
+     */
+    private String getDirectoryFromFilePath(String filePath) {
+        return new File(filePath).getParentFile().getAbsolutePath();
+    }
+
+    /**
+     * Locate what thumbnail page the image being displayed
+     *
+     * @param imagePath     The image being shown (should not be null at this point).
+     * @param directoryPath The directory in which the file resides.
+     * @return The thumbnail page the image resides on, or -1 if no such page could be determined.
+     */
+    private int extractCurrentThumbnailPage(String imagePath, String directoryPath) {
+        int result = -1;
+        CacheDirectoryEntry cacheDirectoryEntry = getOrRetrieveCachedDirectory(directoryPath);
+        List<CacheFileEntry> fileList = cacheDirectoryEntry.getFileList();
+        for (int index = 0; index < fileList.size(); index++) {
+            if (fileList.get(index).getFullPath().equals(imagePath)) {
+                // Found image, so on what page are we now?
+                result = index / HtmlTemplateProcessor.THUMBNAIL_PAGE_SIZE;
+                break;
+            }
+        }
+        return result;
+    }
+
+    /**
      * Extract a page number from the request parameters (if a 'page' parameter is set).
      *
      * @param httpRequest The request to extract the page number from.
@@ -275,31 +411,4 @@ public class InternalPhotoWebServer extends NanoHTTPD {
         return result;
     }
 
-
-
-    /*
-    public Response serve(IHTTPSession httpRequest) {
-        String answer = "";
-        try {
-            // Open file from SD Card
-            File root = Environment.getExternalStorageDirectory();
-            String filePath = root.getAbsolutePath() +
-                    "/www/index.html";
-            MyLog.info("Reading " + filePath);
-            FileReader index = new FileReader(filePath);
-            BufferedReader reader = new BufferedReader(index);
-            String line = "";
-            while ((line = reader.readLine()) != null) {
-                answer += line;
-            }
-            reader.close();
-
-        } catch (IOException ioException) {
-            MyLog.error(ioException.toString(), ioException);
-        }
-
-
-        return new NanoHTTPD.Response(answer);
-    }
-     */
 }

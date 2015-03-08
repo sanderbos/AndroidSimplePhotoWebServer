@@ -6,10 +6,10 @@
             <html>\n
                 <head>\n
                     <title>||title||</title>\n
-                    <link rel="stylesheet" href="/default_style.css" type="text/css"></link>\n
+                    <link rel=\'stylesheet\' href=\'/default_style.css\' type=\'text/css\'></link>\n
                 </head>\n
                 <body>\n
-                    <div class="main-container">\n
+                    <div class=\'main-container position-center\'>\n
                         <h3>||title||</h3>\n
                         ||content||
                     \n</div>\n
@@ -20,13 +20,17 @@
     <string name="default_css">
         <![CDATA[
             body { font-family:Arial, sans-serif; background: #D9D9D9; }\n
-            table { margin: 1em; border-collapse: collapse; }\n
-            td, th { padding: .3em; border: 0px #ccc solid; vertical-align: center }\n
-            .main-container {margin: 30px 30px 30px 30px; background: #D3D3D3; padding: 20px;}\n
-            a {color: black;}\n
-            a:visited {color: black;}\n
-            .image-thumbnail {width: 40px}\n
-            .thumbnail-cell-regular {border: 1px dotted grey; margin: 0px; padding: 0px}\n
+            table { margin: 0px; border-collapse: collapse; }\n
+            td, th { padding: .3em; border: 0px #ccc solid; vertical-align: center; }\n
+            h3 { text-align: center; }\n
+            .main-container {margin: 10px 10px 10px 10px; background: #D3D3D3; padding: 20px; }\n
+            .position-center {position: absolute; left: 25%; }\n
+            a {color: black; }\n
+            a:visited {color: black; }\n
+            .image-thumbnail {width: 40px; }\n
+            .image-main-regular {height: 300px; }\n
+            .thumbnail-cell-regular {border: 1px dotted grey; margin: 0px; padding: 0px; }\n
+            .thumbnail-cell-selected {border: 3px solid grey; margin: 0px; padding: 0px; }\n
         ]]>
     </string>
     <string name="title_regular">Simple Photo Web Server</string>
