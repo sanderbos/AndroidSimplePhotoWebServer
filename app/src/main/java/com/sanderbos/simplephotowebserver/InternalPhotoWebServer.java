@@ -219,6 +219,13 @@ public class InternalPhotoWebServer extends NanoHTTPD {
         return new NanoHTTPD.Response(htmlOutput.getHtmlOutput());
     }
 
+    /**
+     * Determine the paths of the previous and next image in a list of images.
+     * @param cachedDirectory The directory in which the image resides.
+     * @param imagePath The image path to get the previous and next image for.
+     * @return Always an array of two paths, with the previous and next image path filled in, or null
+     * in case one or both does not exist.
+     */
     private String[] getSiblingImages(CacheDirectoryEntry cachedDirectory, String imagePath) {
         String previousImagePath = null;
         String nextImagePath = null;
