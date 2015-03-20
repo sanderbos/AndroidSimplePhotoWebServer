@@ -34,6 +34,16 @@ public class MyLog {
     }
 
     /**
+     * Log info message.
+     *
+     * @param messageTemplate The message template in MessageFormat style.
+     * @param arguments The arguments for the info message.
+     */
+    public static void info(String messageTemplate, Object... arguments) {
+        info(MessageFormat.format(messageTemplate, arguments));
+    }
+
+    /**
      * Log warning message.
      *
      * @param message The message to log.

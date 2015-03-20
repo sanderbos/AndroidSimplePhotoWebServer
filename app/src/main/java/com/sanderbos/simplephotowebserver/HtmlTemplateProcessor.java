@@ -83,6 +83,11 @@ public class HtmlTemplateProcessor {
     public static final int THUMBNAIL_PAGE_SIZE = NUM_THUMBNAIL_ROWS * NUM_THUMBNAIL_COLUMNS;
 
     /**
+     * This thummbnail size should match the width specified in html_fragments.xml image-thumbnail css class.
+     */
+    public static final int THUMBNAIL_WIDTH = 40;
+
+    /**
      * A context object for the template.
      */
     private Activity context;

@@ -6,10 +6,14 @@ import com.sanderbos.simplephotowebserver.cache.CacheDirectoryEntry;
 import com.sanderbos.simplephotowebserver.cache.CacheFileEntry;
 import com.sanderbos.simplephotowebserver.cache.CacheRegistry;
 import com.sanderbos.simplephotowebserver.util.MyLog;
+import com.sanderbos.simplephotowebserver.util.ThumbnailUtil;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
@@ -96,6 +100,7 @@ public class InternalPhotoWebServer extends NanoHTTPD {
      * @return The http response (either the image, or an error page that is never seen).
      */
     private Response displayImage(String imagePath, IHTTPSession httpRequest, boolean showThumbnail) {
+        // TODO: Needs refactoring/ restructuring
         Response response;
         if (imagePath == null) {
             response = get500Response(httpRequest);
@@ -105,22 +110,36 @@ public class InternalPhotoWebServer extends NanoHTTPD {
                 // Then we have to create and register it here and now.
                 cachedFileEntry = new CacheFileEntry(new File(imagePath), cacheRegistry);
             }
-            String pathToServe;
-            if (showThumbnail) {
-                pathToServe = cachedFileEntry.getThumbnailPath();
-            }  else {
-                pathToServe = cachedFileEntry.getFullPath();
-            }
             try {
-                FileInputStream fileStream = new FileInputStream(pathToServe);
-                response = new Response(Response.Status.OK, getMimeType(pathToServe), fileStream);
+                InputStream streamToServe;
+                String mimeType;
+                if (showThumbnail) {
+                    String thumbnailPath = cachedFileEntry.getThumbnailPath();
+                    if (thumbnailPath == null) {
+                        mimeType = getMimeType(thumbnailPath);
+                        streamToServe = new FileInputStream(thumbnailPath);
+                    } else {
+                        mimeType = getMimeType("dummy.jpg");
+                        byte[] thumbnailData = ThumbnailUtil.createJPGThumbnail(cachedFileEntry.getFullPath(), HtmlTemplateProcessor.THUMBNAIL_WIDTH);
+                        streamToServe = new ByteArrayInputStream(thumbnailData);
+                    }
+                } else {
+                    String pathToServe = cachedFileEntry.getFullPath();
+                    mimeType = getMimeType(pathToServe);
+                    streamToServe = new FileInputStream(pathToServe);
+                }
+                response = new Response(Response.Status.OK, mimeType, streamToServe);
                 // NanoHTTPD will close the stream.
             } catch (FileNotFoundException e) {
                 return get404Response(imagePath, httpRequest);
+            } catch (IOException e) {
+                MyLog.error(e.getMessage(), e);
+                return get500Response(httpRequest);
             }
         }
         return response;
     }
+
 
     /**
      * Get a mime-type for a path, based on extension.
@@ -211,7 +230,7 @@ public class InternalPhotoWebServer extends NanoHTTPD {
         }
 
         if (currentDisplayState != null && currentDisplayState.getCurrentImagePath() != null) {
-            String [] siblingImagePaths = getSiblingImages(currentPathCachedDirectory, currentDisplayState.getCurrentImagePath());
+            String[] siblingImagePaths = getSiblingImages(currentPathCachedDirectory, currentDisplayState.getCurrentImagePath());
             htmlOutput.addMainImageHtml(currentDisplayState.getCurrentImagePath(), siblingImagePaths[0], siblingImagePaths[1]);
             htmlOutput.addSeparator();
         }
@@ -221,8 +240,9 @@ public class InternalPhotoWebServer extends NanoHTTPD {
 
     /**
      * Determine the paths of the previous and next image in a list of images.
+     *
      * @param cachedDirectory The directory in which the image resides.
-     * @param imagePath The image path to get the previous and next image for.
+     * @param imagePath       The image path to get the previous and next image for.
      * @return Always an array of two paths, with the previous and next image path filled in, or null
      * in case one or both does not exist.
      */
