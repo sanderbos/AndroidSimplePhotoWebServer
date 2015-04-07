@@ -28,6 +28,11 @@ public class CacheFileEntry {
     private CacheRegistry cache;
 
     /**
+     * Has the media database queried for a thumbnail for this image?
+     */
+    private boolean checkedForMediaStoreThumbnail = false;
+
+    /**
      * Constructor.
      * @param file The file being cached.
      * @param cache A shared registry of all cached directories and files.
@@ -35,7 +40,6 @@ public class CacheFileEntry {
     public CacheFileEntry(File file, CacheRegistry cache) {
         this.path = file.getAbsolutePath();
         this.lastModificationTimestamp = file.lastModified();
-        this.thumbnailPath = file.getAbsolutePath();
         this.cache = cache;
 
         this.cache.registerFile(this);
@@ -64,5 +68,32 @@ public class CacheFileEntry {
      */
     public String getThumbnailPath() {
         return thumbnailPath;
+    }
+
+    /**
+     * Set the thumbnail path (should be a reference to an existing thumbnail for the image this
+     * cache file entry represents).
+     * @param thumbnailPath The path of the thumbnail.
+     */
+    public void setThumbnailPath(String thumbnailPath) {
+        this.thumbnailPath = thumbnailPath;
+    }
+
+    /**
+     * Determine whether the media store has ever been checked for a thumbnail for this image.
+     * @return True in case the checkedForMediaStoreThumbnail has been set, false otherwise.
+     */
+    public boolean isCheckedForMediaStoreThumbnail() {
+        return checkedForMediaStoreThumbnail;
+    }
+
+    /**
+     * Call this method (with true argument) in case it should be registered the media store
+     * has been checked for a thumbnail.
+     * @param checkedForMediaThumbnail The new value for whether the thumbnail media has been
+     *                                 determined.
+     */
+    public void setCheckedForMediaStoreThumbnail(boolean checkedForMediaThumbnail) {
+        this.checkedForMediaStoreThumbnail = checkedForMediaThumbnail;
     }
 }

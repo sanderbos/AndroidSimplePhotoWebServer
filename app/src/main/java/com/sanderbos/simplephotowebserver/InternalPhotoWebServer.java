@@ -1,10 +1,13 @@
 package com.sanderbos.simplephotowebserver;
 
 import android.app.Activity;
+import android.content.Context;
+import android.provider.MediaStore;
 
 import com.sanderbos.simplephotowebserver.cache.CacheDirectoryEntry;
 import com.sanderbos.simplephotowebserver.cache.CacheFileEntry;
 import com.sanderbos.simplephotowebserver.cache.CacheRegistry;
+import com.sanderbos.simplephotowebserver.util.MediaStoreUtil;
 import com.sanderbos.simplephotowebserver.util.MyLog;
 import com.sanderbos.simplephotowebserver.util.ThumbnailUtil;
 
@@ -114,16 +117,25 @@ public class InternalPhotoWebServer extends NanoHTTPD {
                 InputStream streamToServe;
                 String mimeType;
                 if (showThumbnail) {
+                    if (!cachedFileEntry.isCheckedForMediaStoreThumbnail()) {
+                        // First access to cached file for thumbnail access, initialize it now.
+                        checkMediaStoreForThumbnail(cachedFileEntry);
+                    }
+
                     String thumbnailPath = cachedFileEntry.getThumbnailPath();
-                    if (thumbnailPath == null) {
+                    if (thumbnailPath != null) {
+                        MyLog.debug("Getting existing thumbnail {0}", cachedFileEntry.getThumbnailPath());
                         mimeType = getMimeType(thumbnailPath);
                         streamToServe = new FileInputStream(thumbnailPath);
                     } else {
+                        MyLog.debug("Constructing new thumbnail for image {0}", cachedFileEntry.getFullPath());
                         mimeType = getMimeType("dummy.jpg");
+                        // TODO: Wait, will this generate a thumbnail in the media database?
                         byte[] thumbnailData = ThumbnailUtil.createJPGThumbnail(cachedFileEntry.getFullPath(), HtmlTemplateProcessor.THUMBNAIL_WIDTH);
                         streamToServe = new ByteArrayInputStream(thumbnailData);
                     }
                 } else {
+                    MyLog.debug("Getting image {0}", cachedFileEntry.getFullPath());
                     String pathToServe = cachedFileEntry.getFullPath();
                     mimeType = getMimeType(pathToServe);
                     streamToServe = new FileInputStream(pathToServe);
@@ -139,7 +151,6 @@ public class InternalPhotoWebServer extends NanoHTTPD {
         }
         return response;
     }
-
 
     /**
      * Get a mime-type for a path, based on extension.
@@ -349,7 +360,7 @@ public class InternalPhotoWebServer extends NanoHTTPD {
      * @return A response with the CSS content with mime type text/css
      */
     private Response getDefaultCssReponse() {
-        String cssContent = context.getResources().getText(R.string.default_css).toString();
+        String cssContent = getContext().getResources().getText(R.string.default_css).toString();
 
         Response response = new NanoHTTPD.Response(cssContent);
         // Css must be returned as mime-type CSS, otherwise browsers will ignore the CSS
@@ -436,6 +447,48 @@ public class InternalPhotoWebServer extends NanoHTTPD {
             result = -1;
         }
         return result;
+    }
+
+    /**
+     * Get a reference to the Android context.
+     *
+     * @return The (a) context.
+     */
+    private Context getContext() {
+        return context;
+    }
+
+    /**
+     * Try to find a path to an existing thumnbnail for an image, in the Android media store.
+     * The cachedFileEntry is updated in case a thumbnail is found (and in any case the state
+     * is updated that this query was performed).
+     *
+     * @param cachedFileEntry The file entry to determine a thumbnail for, and is updated with
+     *                        thumbnail information in this method.
+     */
+    private void checkMediaStoreForThumbnail(CacheFileEntry cachedFileEntry) {
+        // Whatever happens next, we checked for a thumbnail.
+        cachedFileEntry.setCheckedForMediaStoreThumbnail(true);
+
+        // If a thumbnail path was already set, we are done.
+        if (cachedFileEntry.getThumbnailPath() == null) {
+            long imageFileId = new MediaStoreUtil(context).getImageIdForPath(cachedFileEntry.getFullPath());
+
+            if (imageFileId != -1) {
+                String mediaStoreQuery = MediaStore.Images.Thumbnails.IMAGE_ID + " = ? AND "
+                        + MediaStore.Images.Thumbnails.KIND + " = "
+                        + MediaStore.Images.Thumbnails.MINI_KIND;
+
+                String thumbnailPath = new MediaStoreUtil(context).performMediaStoreQueryWithSingleStringResult(MediaStore.Images.Thumbnails.EXTERNAL_CONTENT_URI,
+                        mediaStoreQuery, String.valueOf(imageFileId), MediaStore.Images.Thumbnails.DATA);
+                // Sanity check, we expect to get a JPEG image here, otherwise be safe and just ignore the Android storage.
+                if (thumbnailPath != null && thumbnailPath.toLowerCase().endsWith("jpg")) {
+                    MyLog.debug("Found thumbnail {0}", thumbnailPath);
+                    cachedFileEntry.setThumbnailPath(thumbnailPath);
+                }
+
+            }
+        }
     }
 
 }

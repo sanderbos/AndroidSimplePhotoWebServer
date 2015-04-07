@@ -292,7 +292,7 @@ public class HtmlTemplateProcessor {
             cellCssClass = "thumbnail-cell-regular";
         }
         addHtmlContent("<td class=\"" + cellCssClass + "\">");
-        String imageTag = createImage(constructTargetURL(ACTION_URL_SHOW_THUMBNAIL, fileEntry.getThumbnailPath()), "image-thumbnail", null);
+        String imageTag = createImage(constructTargetURL(ACTION_URL_SHOW_THUMBNAIL, fileEntry.getFullPath()), "image-thumbnail", null);
         String imageTagWithHyperLink = createHyperLink(imageTag, constructTargetURL(ACTION_URL_SHOW_PHOTO_PAGE, fileEntry.getFullPath()), null);
         addHtmlContent(imageTagWithHyperLink);
         addHtmlContent("</td>");

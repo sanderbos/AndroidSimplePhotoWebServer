@@ -150,7 +150,7 @@ public class SimplePhotoWebServerActivity extends ActionBarActivity {
         } catch (IOException ioException) {
             MyLog.error("The server could not start.", ioException);
         }
-        MyLog.debug("Web server initialized.");
+        MyLog.info("Web server initialized.");
         updateGUIStatus();
         return true;
     }

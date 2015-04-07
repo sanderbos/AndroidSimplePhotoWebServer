@@ -25,6 +25,16 @@ public class MyLog {
     }
 
     /**
+     * DEbug info message.
+     *
+     * @param messageTemplate The message template in MessageFormat style.
+     * @param arguments The arguments for the debug message.
+     */
+    public static void debug(String messageTemplate, Object... arguments) {
+        debug(MessageFormat.format(messageTemplate, arguments));
+    }
+
+    /**
      * Log info message.
      *
      * @param message The message to log.
