@@ -285,14 +285,15 @@ public class HtmlTemplateProcessor {
      * @param isSelectedImage Whether this image is the currently selected image or not.
      */
     private void addThumbnailHtml(CacheFileEntry fileEntry, boolean isSelectedImage) {
-        String cellCssClass;
-        if (isSelectedImage) {
-            cellCssClass = "thumbnail-cell-selected";
-        } else {
-            cellCssClass = "thumbnail-cell-regular";
-        }
+        String cellCssClass = "thumbnail-cell-regular";
         addHtmlContent("<td class=\"" + cellCssClass + "\">");
-        String imageTag = createImage(constructTargetURL(ACTION_URL_SHOW_THUMBNAIL, fileEntry.getFullPath()), "image-thumbnail", null);
+        String imageCssClass;
+        if (isSelectedImage) {
+            imageCssClass = "image-thumbnail image-thumbnail-selected";
+        } else {
+            imageCssClass = "image-thumbnail";
+        }
+        String imageTag = createImage(constructTargetURL(ACTION_URL_SHOW_THUMBNAIL, fileEntry.getFullPath()), imageCssClass, null);
         String imageTagWithHyperLink = createHyperLink(imageTag, constructTargetURL(ACTION_URL_SHOW_PHOTO_PAGE, fileEntry.getFullPath()), null);
         addHtmlContent(imageTagWithHyperLink);
         addHtmlContent("</td>");
