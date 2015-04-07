@@ -7,6 +7,7 @@ import android.provider.MediaStore;
 import com.sanderbos.simplephotowebserver.cache.CacheDirectoryEntry;
 import com.sanderbos.simplephotowebserver.cache.CacheFileEntry;
 import com.sanderbos.simplephotowebserver.cache.CacheRegistry;
+import com.sanderbos.simplephotowebserver.cache.ThumbnailDataCache;
 import com.sanderbos.simplephotowebserver.util.MediaStoreUtil;
 import com.sanderbos.simplephotowebserver.util.MyLog;
 import com.sanderbos.simplephotowebserver.util.ThumbnailUtil;
@@ -17,6 +18,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.RandomAccessFile;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,6 +35,11 @@ public class InternalPhotoWebServer extends NanoHTTPD {
      * Temporary hard coded images path.
      */
     private static final String TEMP_IMAGES_PATH = "/storage/sdcard0/WhatsApp/Media/WhatsApp Images";
+
+    /**
+     * JPEG mime type (which some code treats differently from other mimetypes.
+     */
+    private static final String MIME_TYPE_JPEG = "image/jpeg";
 
     /**
      * The context activity, used to resolve resources.
@@ -103,7 +110,6 @@ public class InternalPhotoWebServer extends NanoHTTPD {
      * @return The http response (either the image, or an error page that is never seen).
      */
     private Response displayImage(String imagePath, IHTTPSession httpRequest, boolean showThumbnail) {
-        // TODO: Needs refactoring/ restructuring
         Response response;
         if (imagePath == null) {
             response = get500Response(httpRequest);
@@ -114,34 +120,18 @@ public class InternalPhotoWebServer extends NanoHTTPD {
                 cachedFileEntry = new CacheFileEntry(new File(imagePath), cacheRegistry);
             }
             try {
-                InputStream streamToServe;
-                String mimeType;
+                ResponseDataItem responseDataItem;
                 if (showThumbnail) {
-                    if (!cachedFileEntry.isCheckedForMediaStoreThumbnail()) {
-                        // First access to cached file for thumbnail access, initialize it now.
-                        checkMediaStoreForThumbnail(cachedFileEntry);
-                    }
-
-                    String thumbnailPath = cachedFileEntry.getThumbnailPath();
-                    if (thumbnailPath != null) {
-                        MyLog.debug("Getting existing thumbnail {0}", cachedFileEntry.getThumbnailPath());
-                        mimeType = getMimeType(thumbnailPath);
-                        streamToServe = new FileInputStream(thumbnailPath);
-                    } else {
-                        MyLog.debug("Constructing new thumbnail for image {0}", cachedFileEntry.getFullPath());
-                        mimeType = getMimeType("dummy.jpg");
-                        // TODO: Wait, will this generate a thumbnail in the media database?
-                        byte[] thumbnailData = ThumbnailUtil.createJPGThumbnail(cachedFileEntry.getFullPath(), HtmlTemplateProcessor.THUMBNAIL_WIDTH);
-                        streamToServe = new ByteArrayInputStream(thumbnailData);
-                    }
+                    responseDataItem = getResponseDataForThumbnail(cachedFileEntry);
                 } else {
                     MyLog.debug("Getting image {0}", cachedFileEntry.getFullPath());
                     String pathToServe = cachedFileEntry.getFullPath();
-                    mimeType = getMimeType(pathToServe);
-                    streamToServe = new FileInputStream(pathToServe);
+                    String mimeType = getMimeType(pathToServe);
+                    InputStream streamToServe = new FileInputStream(pathToServe);
+                    responseDataItem = new ResponseDataItem(streamToServe, mimeType);
                 }
-                response = new Response(Response.Status.OK, mimeType, streamToServe);
                 // NanoHTTPD will close the stream.
+                response = new Response(Response.Status.OK, responseDataItem.getMimeType(), responseDataItem.getStreamToServe());
             } catch (FileNotFoundException e) {
                 return get404Response(imagePath, httpRequest);
             } catch (IOException e) {
@@ -150,6 +140,72 @@ public class InternalPhotoWebServer extends NanoHTTPD {
             }
         }
         return response;
+    }
+
+    /**
+     * Get the thumbnail data for a cached file entry, using various levels of caching (that are
+     * also updated while getting the data).
+     *
+     * @param cachedFileEntry The file entry to get the thumbnail data for.
+     * @return A response data item object representing the cached file entry.
+     * @throws IOException In case of an exception while accessing the data (we do not expect
+     *                     errors from this method, it should already have been checked whether the cachedFileEntry
+     *                     can have a proper thumbnail, which may be generated in this method).
+     */
+    private ResponseDataItem getResponseDataForThumbnail(CacheFileEntry cachedFileEntry) throws IOException {
+        ThumbnailDataCache thumbnailDataCache = this.cacheRegistry.getThumbnailDataCache();
+
+        String imagePath = cachedFileEntry.getFullPath();
+
+        String mimeType = MIME_TYPE_JPEG;
+        byte[] dataToServe = thumbnailDataCache.getFromCache(imagePath);
+        if (dataToServe == null) {
+            // Not found in cache, retrieve it and then cache it.
+            if (!cachedFileEntry.isCheckedForMediaStoreThumbnail()) {
+                // First access to cached file for thumbnail access, initialize it now.
+                checkMediaStoreForThumbnail(cachedFileEntry);
+            }
+
+            String thumbnailPath = cachedFileEntry.getThumbnailPath();
+            if (thumbnailPath != null && new File(thumbnailPath).exists()) {
+                MyLog.debug("Getting existing thumbnail {0}", thumbnailPath);
+                mimeType = getMimeType(thumbnailPath);
+                dataToServe = readFile(thumbnailPath);
+            } else {
+                MyLog.debug("Constructing new thumbnail for image {0}", cachedFileEntry.getFullPath());
+                mimeType = MIME_TYPE_JPEG;
+                dataToServe = ThumbnailUtil.createJPGThumbnail(cachedFileEntry.getFullPath(), HtmlTemplateProcessor.THUMBNAIL_WIDTH);
+            }
+
+            // Currently the data cache simply assumes JPEG, so it does not need to track
+            // the mime type.
+            if (MIME_TYPE_JPEG.equals(mimeType)) {
+                thumbnailDataCache.addToCache(imagePath, dataToServe);
+            }
+        }
+
+        return new ResponseDataItem(new ByteArrayInputStream(dataToServe), mimeType);
+    }
+
+    /**
+     * Read a file into a byte array. The file is expected to fit into memory (contains
+     * a very rudimentary check for this).
+     *
+     * @param path The (full) path of the file to load.
+     * @return The contents of the file read into memory.
+     * @throws IOException In case of errors while accessing the file (including if it does
+     *                     not exist).
+     */
+    private byte[] readFile(String path) throws IOException {
+        RandomAccessFile randomAccessFile = new RandomAccessFile(new File(path), "r");
+        try {
+            int size = (int) randomAccessFile.length();
+            byte[] result = new byte[size];
+            randomAccessFile.readFully(result);
+            return result;
+        } finally {
+            randomAccessFile.close();
+        }
     }
 
     /**
@@ -165,7 +221,7 @@ public class InternalPhotoWebServer extends NanoHTTPD {
             switch (extension) {
                 case "jpg":
                 case "jpeg":
-                    mimeType = "image/jpeg";
+                    mimeType = MIME_TYPE_JPEG;
                     break;
                 case "png":
                     mimeType = "image/png";
@@ -488,6 +544,50 @@ public class InternalPhotoWebServer extends NanoHTTPD {
                 }
 
             }
+        }
+    }
+
+    /**
+     * Simple structure class to represent an item about to be served.
+     */
+    private static final class ResponseDataItem {
+        /**
+         * The mimetype of the response item
+         */
+        private String mimeType;
+
+        /**
+         * The inputstream representing the data to serve.
+         */
+        private InputStream streamToServe;
+
+        /**
+         * Constructor.
+         *
+         * @param streamToServe data to serve.
+         * @param mimeType      The mime type of the data to serve.
+         */
+        private ResponseDataItem(InputStream streamToServe, String mimeType) {
+            this.mimeType = mimeType;
+            this.streamToServe = streamToServe;
+        }
+
+        /**
+         * Get the mime type.
+         *
+         * @return mime type.
+         */
+        public String getMimeType() {
+            return mimeType;
+        }
+
+        /**
+         * Get the input stream for the data.
+         *
+         * @return The input stream.
+         */
+        public InputStream getStreamToServe() {
+            return streamToServe;
         }
     }
 

@@ -21,6 +21,11 @@ public class CacheRegistry {
     private Map<String, CacheFileEntry> cachedFiles = new HashMap<>();
 
     /**
+     * The thumbnail data cache, stored here to keep all caches together.
+     */
+    private ThumbnailDataCache thumbnailDataCache = new ThumbnailDataCache(ThumbnailDataCache.DEFAULT_CACHE_SIZE);
+
+    /**
      * Public constructor.
      */
     public CacheRegistry() {
@@ -63,5 +68,13 @@ public class CacheRegistry {
      */
     public CacheFileEntry getCachedFile(String path) {
         return cachedFiles.get(path);
+    }
+
+    /**
+     * Get access to the thumbnail data cache (that is only stored but not truly linked to the cache registry).
+     * @return The thumbnail data cache.
+     */
+    public ThumbnailDataCache getThumbnailDataCache() {
+        return this.thumbnailDataCache;
     }
 }

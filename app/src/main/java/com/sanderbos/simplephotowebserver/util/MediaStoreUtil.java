@@ -50,12 +50,15 @@ public class MediaStoreUtil {
         String[] projection = {targetColumnName};
         String[] arguments = {queryArgument};
 
-        try (Cursor mediaCursor = performMediaStoreQuery(externalContentURI, mediaQuery, projection, arguments)) {
+        Cursor mediaCursor = performMediaStoreQuery(externalContentURI, mediaQuery, projection, arguments);
+        try {
             if (mediaCursor.moveToFirst()) {
                 // Only one column is selected in the projection, so can safely get the first column
                 int columnIndex = mediaCursor.getColumnIndexOrThrow(targetColumnName);
                 result = mediaCursor.getString(columnIndex);
             }
+        } finally {
+            mediaCursor.close();
         }
         return result;
     }
@@ -80,7 +83,8 @@ public class MediaStoreUtil {
         String[] arguments = {fileName};
         Uri contentUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
 
-        try (Cursor mediaCursor = performMediaStoreQuery(contentUri, mediaStoreQuery, projection, arguments)) {
+        Cursor mediaCursor = performMediaStoreQuery(contentUri, mediaStoreQuery, projection, arguments);
+        try {
             int columnIndexId = mediaCursor.getColumnIndexOrThrow(MediaStore.Images.ImageColumns._ID);
             int columnIndexData = mediaCursor.getColumnIndexOrThrow(MediaStore.Images.ImageColumns.DATA);
 
@@ -96,6 +100,8 @@ public class MediaStoreUtil {
                     bestFoundScore = comparisonScore;
                 }
             }
+        } finally {
+            mediaCursor.close();
         }
 
         return resultId;
