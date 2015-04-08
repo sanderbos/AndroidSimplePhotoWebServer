@@ -1,3 +1,2 @@
 # Android Simple Photo WebServer
-At this moment mostly dummy project for my Android photo web server.
-
+At this moment still very much in progress project for my experimental Android app, a simple photo web server.
