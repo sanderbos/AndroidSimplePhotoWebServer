@@ -1,5 +1,7 @@
 package com.sanderbos.simplephotowebserver.cache;
 
+import com.sanderbos.simplephotowebserver.util.MediaDirectoryFilter;
+
 import java.io.File;
 import java.io.FileFilter;
 import java.util.ArrayList;
@@ -50,6 +52,11 @@ public class CacheDirectoryEntry {
     private List<CacheFileEntry> fileList;
 
     /**
+     * The amount of media files in this directory.
+     */
+    private int mediaFilesCount;
+
+    /**
      * Constructor for a new cached directory entry.
      *
      * @param directory The directory file to represent in this object.
@@ -59,6 +66,8 @@ public class CacheDirectoryEntry {
         this.path = directory.getAbsolutePath();
         this.name = directory.getName();
         this.cache = cache;
+
+        this.mediaFilesCount = directory.listFiles(new MediaFileFilter()).length;
 
         // This is the logical place to do the registration, to ensure it happens early
         // and it only has to happen once.
@@ -76,7 +85,7 @@ public class CacheDirectoryEntry {
         if (subDirectoryList == null) {
             subDirectoryList = new ArrayList<>();
             File directory = new File(path);
-            File[] subDirectories = directory.listFiles(new DirectoryFilter());
+            File[] subDirectories = directory.listFiles(new MediaDirectoryFilter());
             for (File subDirectory : subDirectories) {
                 String subDirectoryPath = subDirectory.getAbsolutePath();
                 CacheDirectoryEntry subDirectoryEntry = cache.getCachedDirectory(subDirectoryPath);
@@ -90,6 +99,15 @@ public class CacheDirectoryEntry {
     }
 
     /**
+     * Determine how many media files are in this directory (can be called without initializing
+     * the file list proper).
+     * @return The number of media files in this directory itself (does not count subdirectories).
+     */
+    public int getMediaFilesCount() {
+        return mediaFilesCount;
+    }
+
+    /**
      * Set up the cached file list of this directory, in case it has not been initialized yet.
      */
     public void initializeFileList() {
@@ -98,9 +116,7 @@ public class CacheDirectoryEntry {
             File directory = new File(path);
             File[] files = directory.listFiles(new MediaFileFilter());
             for (File file : files) {
-                if (file.isFile() && hasKnownExtension(file)) {
-                    fileList.add(new CacheFileEntry(file, cache));
-                }
+                fileList.add(new CacheFileEntry(file, cache));
             }
             Collections.sort(fileList, new ModificationDateComparator());
         }
@@ -178,23 +194,6 @@ public class CacheDirectoryEntry {
     }
 
     /**
-     * File filter that only accepts directories.
-     */
-    private static class DirectoryFilter implements FileFilter {
-
-        /**
-         * Implementation of file filter interface.
-         *
-         * @param file The file being filtered.
-         * @return true in case the file is a directory.
-         */
-        @Override
-        public boolean accept(File file) {
-            return file.isDirectory();
-        }
-    }
-
-    /**
      * Comparator implementation for CacheFileEntry, based on last modification timestamp.
      */
     private class ModificationDateComparator implements java.util.Comparator<CacheFileEntry> {
@@ -210,9 +209,10 @@ public class CacheDirectoryEntry {
 
             long timeDifference = (first.getLastModificationTimestamp() - second.getLastModificationTimestamp());
             int result;
-            if (timeDifference < 0) {
+            // (Cannot simply cast, because long may flow into negative number in case last modification timestamp not set)
+            if (timeDifference > 0) {
                 result = -1;
-            } else if (timeDifference > 0) {
+            } else if (timeDifference < 0) {
                 result = 1;
             } else {
                 result = 0;

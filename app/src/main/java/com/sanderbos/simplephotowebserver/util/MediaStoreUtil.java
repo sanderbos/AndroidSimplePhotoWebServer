@@ -6,6 +6,8 @@ import android.net.Uri;
 import android.provider.MediaStore;
 
 import java.io.File;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Helper class with 'fuzzy' access to the media store.
@@ -107,6 +109,69 @@ public class MediaStoreUtil {
         return resultId;
     }
 
+    /**
+     * Determine all directories for which images and videos are registered in the media store.
+     *
+     * @param foundDirectories Found directories are added (full path) to this set if they
+     *                         are not already present.
+     */
+    public void retrieveAllMediaDirectories(Set<String> foundDirectories) {
+        String mediaStoreQuery = "";
+        String[] arguments = {};
+        String projectionColumn;
+        Cursor mediaCursor;
+
+        projectionColumn = MediaStore.Images.ImageColumns.DATA;
+        mediaCursor = performMediaStoreQuery(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, mediaStoreQuery, new String[]{projectionColumn}, arguments);
+        try {
+            addDataDirectories(mediaCursor, projectionColumn, foundDirectories);
+        } finally {
+            mediaCursor.close();
+        }
+        projectionColumn = MediaStore.Video.VideoColumns.DATA;
+        mediaCursor = performMediaStoreQuery(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, mediaStoreQuery, new String[]{projectionColumn}, arguments);
+        try {
+            addDataDirectories(mediaCursor, projectionColumn, foundDirectories);
+        } finally {
+            mediaCursor.close();
+        }
+    }
+
+    /**
+     * Add all directories (found in the full file paths of the data column.
+     *
+     * @param mediaCursor      The open media cursor with file paths in the data column.
+     * @param dataColumnName   The name of the column in which the data is stored.
+     * @param foundDirectories Running set of found directories.
+     */
+    private void addDataDirectories(Cursor mediaCursor, String dataColumnName, Set<String> foundDirectories) {
+        // Try to be quick but safe.
+        int columnIndexData = mediaCursor.getColumnIndexOrThrow(dataColumnName);
+        int lastIndexOfSlash;
+        String mediaStorePath;
+        String directoryPath;
+        while (mediaCursor.moveToNext()) {
+            mediaStorePath = mediaCursor.getString(columnIndexData);
+            if (mediaStorePath != null) {
+                lastIndexOfSlash = mediaStorePath.lastIndexOf('/');
+                if (lastIndexOfSlash != -1) {
+                    directoryPath = mediaStorePath.substring(0, lastIndexOfSlash);
+                    // Set does de-duplication
+                    foundDirectories.add(directoryPath);
+                }
+            }
+        }
+    }
+
+    /**
+     * Utility method to execute media query to make it slightly more readable.
+     *
+     * @param contentUri      The URI to execute the query on.
+     * @param mediaStoreQuery The query (template).
+     * @param projection      The columns to fetch in the query.
+     * @param arguments       The arguments for the query.
+     * @return An open cursor with the query result.
+     */
     private Cursor performMediaStoreQuery(Uri contentUri, String mediaStoreQuery, String[] projection, String[] arguments) {
         return getContext().getContentResolver().query(contentUri, projection,
                 mediaStoreQuery, arguments, null);

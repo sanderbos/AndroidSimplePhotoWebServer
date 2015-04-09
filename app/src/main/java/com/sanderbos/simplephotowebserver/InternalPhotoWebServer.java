@@ -8,12 +8,14 @@ import com.sanderbos.simplephotowebserver.cache.CacheDirectoryEntry;
 import com.sanderbos.simplephotowebserver.cache.CacheFileEntry;
 import com.sanderbos.simplephotowebserver.cache.CacheRegistry;
 import com.sanderbos.simplephotowebserver.cache.ThumbnailDataCache;
+import com.sanderbos.simplephotowebserver.util.MediaDirectoryFilter;
 import com.sanderbos.simplephotowebserver.util.MediaStoreUtil;
 import com.sanderbos.simplephotowebserver.util.MyLog;
 import com.sanderbos.simplephotowebserver.util.ThumbnailUtil;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -21,7 +23,10 @@ import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import fi.iki.elonen.NanoHTTPD;
 
@@ -30,11 +35,6 @@ import fi.iki.elonen.NanoHTTPD;
  * was found on http://stackoverflow.com/questions/14309256/using-nanohttpd-in-android.
  */
 public class InternalPhotoWebServer extends NanoHTTPD {
-
-    /**
-     * Temporary hard coded images path.
-     */
-    private static final String TEMP_IMAGES_PATH = "/storage/sdcard0/WhatsApp/Media/WhatsApp Images";
 
     /**
      * JPEG mime type (which some code treats differently from other mimetypes.
@@ -285,9 +285,11 @@ public class InternalPhotoWebServer extends NanoHTTPD {
             currentPathCachedDirectory = getOrRetrieveCachedDirectory(currentDisplayState.getCurrentDirectoryPath());
         }
 
+        htmlOutput.addHtmlContent("<ul>");
         for (CacheDirectoryEntry topLevelDirectory : topLevelDirectories) {
             htmlOutput.createDirectoryTree(topLevelDirectory, currentPathCachedDirectory);
         }
+        htmlOutput.addHtmlContent("</ul>");
 
         // If a directory is selected, show its contents as thumbnails.
         htmlOutput.addSeparator();
@@ -346,10 +348,12 @@ public class InternalPhotoWebServer extends NanoHTTPD {
             topLevelDirectories = new ArrayList<>();
 
             // Set up temporary starting point for directories
-            List<String> directories = new ArrayList<>();
-            directories.add(TEMP_IMAGES_PATH);
+            Set<String> directories = new HashSet<>();
+            new MediaStoreUtil(getContext()).retrieveAllMediaDirectories(directories);
 
-            for (String directoryPath : directories) {
+            List<String> orderedDirectories = filterAndOrderDirectories(directories);
+
+            for (String directoryPath : orderedDirectories) {
                 File directory = new File(directoryPath);
                 if (directory.exists()) {
                     CacheDirectoryEntry cachedDirectoryEntry = getOrRetrieveCachedDirectory(directoryPath);
@@ -358,6 +362,74 @@ public class InternalPhotoWebServer extends NanoHTTPD {
             }
         }
     }
+
+    /**
+     * Apply the following filtering to the media directory list:
+     * <ul>
+     * <li>Order by name.</li>
+     * <li>Ensure directories that are a subdirectory of entries also in the list are omitted.</li>
+     * <li>Take out hidden directories.</li>
+     * </ul>
+     *
+     * @param directories A set of directories to filter and sort.
+     * @return A filtered sorted list of directories.
+     */
+    private List<String> filterAndOrderDirectories(Set<String> directories) {
+        List<String> result = new ArrayList<>();
+
+        FileFilter directoryFilter = new MediaDirectoryFilter();
+
+        // Set up list, filtering out all directories that are a sub-directory of the list.
+        for (String directory : directories) {
+            int occurenceCount = 0;
+            for (String checkDirectory : directories) {
+                if (directory.startsWith(checkDirectory)) {
+                    occurenceCount++;
+                }
+            }
+            // Only add if there is no base directory of this directory also in the list.
+            // (also take out hidden paths in the process)
+            if (occurenceCount == 1 && directoryFilter.accept(new File(directory))) {
+                result.add(directory);
+            }
+        }
+
+        Collections.sort(result, new DirectoryPathComparator());
+
+        return result;
+    }
+
+    /**
+     * Comparator that compares directory paths based on their directory-name,
+     * case insensitive and having a preference for the term 'Camera'.
+     */
+    private class DirectoryPathComparator implements java.util.Comparator<String> {
+        /**
+         * 'Camera' is a special directory name, as it is probably the main photo directory.
+         */
+        private static final String CAMERA_DIRECTORY_NAME = "Camera";
+
+        /**
+         * Implementation of compare method.
+         *
+         * @param first  The first directory path to compare.
+         * @param second The second directory path to compare.
+         * @return The comparison result.
+         */
+        @Override
+        public int compare(String first, String second) {
+            String firstDirectoryName = new File(first).getName();
+            String secondDirectoryName = new File(second).getName();
+            if (CAMERA_DIRECTORY_NAME.equals(firstDirectoryName)) {
+                return -1;
+            } else if (CAMERA_DIRECTORY_NAME.equals(secondDirectoryName)) {
+                return 1;
+            } else {
+                return firstDirectoryName.compareTo(secondDirectoryName);
+            }
+        }
+    }
+
 
     /**
      * Get a cached version of the directory (it may be retrieved from the cache, or generated

@@ -172,9 +172,7 @@ public class HtmlTemplateProcessor {
      * @param directoryEntryToHighlight The directory entry to highlight in the tree.
      */
     public void createDirectoryTree(CacheDirectoryEntry cachedDirectoryEntry, CacheDirectoryEntry directoryEntryToHighlight) {
-        addHtmlContent("<ul>");
-        createDirectoryTreeRecursive(cachedDirectoryEntry, directoryEntryToHighlight);
-        addHtmlContent("</ul>");
+        addHtmlContent(createDirectoryTreeRecursive(cachedDirectoryEntry, directoryEntryToHighlight).toString());
     }
 
     /**
@@ -183,26 +181,51 @@ public class HtmlTemplateProcessor {
      *
      * @param cachedDirectoryEntry      The directory to add an item for.
      * @param directoryEntryToHighlight The directory entry to highlight in the tree.
+     * @return The constructed html content in this method.
      */
-    private void createDirectoryTreeRecursive(CacheDirectoryEntry cachedDirectoryEntry, CacheDirectoryEntry directoryEntryToHighlight) {
-        String name = cachedDirectoryEntry.getName();
-        String path = cachedDirectoryEntry.getFullPath();
-        String url = constructTargetURL(ACTION_URL_SHOW_DIRECTORY_PAGE, path);
-        addHtmlContent("<li>");
-        String hyperlink = createHyperLink(name, url, null);
-        if (cachedDirectoryEntry.equals(directoryEntryToHighlight)) {
-            hyperlink = "<b>" + hyperlink + "</b>";
-        }
-        addHtmlContent(hyperlink);
-        addHtmlContent("</li>");
+    private StringBuilder createDirectoryTreeRecursive(CacheDirectoryEntry cachedDirectoryEntry, CacheDirectoryEntry directoryEntryToHighlight) {
+        // Check sublist first, even though content is added later.
+        StringBuilder subContentString = new StringBuilder();
         List<CacheDirectoryEntry> subDirectories = cachedDirectoryEntry.getSubDirectoryList();
         if (subDirectories.size() > 0) {
-            addHtmlContent("<ul>");
+            StringBuilder subContent = new StringBuilder();
             for (CacheDirectoryEntry subDirectoryEntry : subDirectories) {
-                createDirectoryTreeRecursive(subDirectoryEntry, directoryEntryToHighlight);
+                subContent.append(createDirectoryTreeRecursive(subDirectoryEntry, directoryEntryToHighlight));
+
             }
-            addHtmlContent("</ul>");
+            if (subContent.length() > 0) {
+                subContentString.append("<ul>");
+                subContentString.append(subContent);
+                subContentString.append("</ul>");
+            }
         }
+
+        StringBuilder entryString = new StringBuilder();
+        int fileCount = cachedDirectoryEntry.getMediaFilesCount();
+        String directoryName = cachedDirectoryEntry.getName();
+        if (fileCount > 0) {
+            String path = cachedDirectoryEntry.getFullPath();
+            String url = constructTargetURL(ACTION_URL_SHOW_DIRECTORY_PAGE, path);
+            entryString.append("<li>");
+            String hyperlink = createHyperLink(directoryName, url, null);
+            if (cachedDirectoryEntry.equals(directoryEntryToHighlight)) {
+                hyperlink = "<b>" + hyperlink + "</b>";
+            }
+            entryString.append(hyperlink);
+            String fileCountString = MessageFormat.format(" ({0}) ", fileCount);
+            entryString.append(fileCountString);
+            entryString.append("</li>");
+        } else if (subContentString.length() > 0) {
+            // Still need a list item entry, for the subtree
+            entryString.append("<li>");
+            entryString.append(directoryName);
+            entryString.append("</li>");
+        }
+
+        StringBuilder resultString = new StringBuilder();
+        resultString.append(entryString);
+        resultString.append(subContentString);
+        return resultString;
     }
 
     /**
@@ -233,7 +256,7 @@ public class HtmlTemplateProcessor {
         // This always renders an entire table
         for (index = firstItem; index < lastItem; index++) {
 
-            if (currentColumnIndex > NUM_THUMBNAIL_COLUMNS) {
+            if (currentColumnIndex >= NUM_THUMBNAIL_COLUMNS) {
                 // Start a new row
                 currentColumnIndex = 0;
                 addHtmlContent("</tr><tr>");
@@ -368,18 +391,11 @@ public class HtmlTemplateProcessor {
     }
 
     /**
-     * Add a break newline to the HTML content.
-     */
-    public void addHtmlNewline() {
-        addHtmlContent("<br/>");
-    }
-
-    /**
      * Add text to the main HTML content.
      *
      * @param contentFragment The content to add.
      */
-    private void addHtmlContent(String contentFragment) {
+    public void addHtmlContent(String contentFragment) {
         content.append(contentFragment);
         content.append("\n");
     }
