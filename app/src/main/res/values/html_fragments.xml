@@ -19,14 +19,14 @@
     </string>
     <string name="default_css">
         <![CDATA[
-            body { font-family:Arial, sans-serif; background: #D9D9D9; }\n
+            body { font-family:Arial, sans-serif; background: black; color: white; }\n
             table { margin: 0px; border-collapse: collapse; }\n
             td, th { padding: .3em; border: 0px #ccc solid; vertical-align: center; }\n
             h3 { text-align: center; }\n
-            .main-container {margin: 10px 10px 10px 10px; background: #D3D3D3; padding: 20px; }\n
+            .main-container {margin: 10px 10px 10px 10px; padding: 20px; }\n
             .position-center {position: absolute; left: 25%; }\n
-            a {color: black; }\n
-            a:visited {color: black; }\n
+            a {color: white; }\n
+            a:visited {color: white; }\n
             .image-thumbnail {width: 40px; }\n
             .image-thumbnail-selected {border: 3px solid grey; }\n
             .image-main-regular {height: 300px; }\n

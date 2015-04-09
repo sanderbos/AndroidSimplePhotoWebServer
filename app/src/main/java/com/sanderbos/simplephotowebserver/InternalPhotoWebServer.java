@@ -173,6 +173,12 @@ public class InternalPhotoWebServer extends NanoHTTPD {
         int result = -1;
         if ("logo".equals(iconName)) {
             result = R.drawable.web_logo;
+        } else if ("previous".equals(iconName)) {
+            result = R.drawable.web_previous;
+        } else if ("next".equals(iconName)) {
+            result = R.drawable.web_next;
+        } else if ("download".equals(iconName)) {
+            result = R.drawable.web_download;
         }
         return result;
     }

@@ -247,7 +247,8 @@ public class HtmlTemplateProcessor {
 
         addHtmlContent("<table><tr><td>");
         if (thumbnailPageNumber > 0) {
-            addHtmlContent(createHyperLink("&lt;", constructTargetURL(ACTION_URL_SHOW_DIRECTORY_PAGE, cachedDirectoryEntry.getFullPath(), thumbnailPageNumber - 1), null));
+            String imageTag = createImage(constructTargetURL(ACTION_URL_SHOW_ICON, "previous"), "", "previous");
+            addHtmlContent(createHyperLink(imageTag, constructTargetURL(ACTION_URL_SHOW_DIRECTORY_PAGE, cachedDirectoryEntry.getFullPath(), thumbnailPageNumber - 1), null));
         }
         addHtmlContent("</td><td>");
 
@@ -278,7 +279,8 @@ public class HtmlTemplateProcessor {
         addHtmlContent("</td><td>");
         if (index < fileEntries.size()) {
             // There are more entries beyond the ones now shown.
-            addHtmlContent(createHyperLink("&gt;", constructTargetURL(ACTION_URL_SHOW_DIRECTORY_PAGE, cachedDirectoryEntry.getFullPath(), thumbnailPageNumber + 1), null));
+            String imageTag = createImage(constructTargetURL(ACTION_URL_SHOW_ICON, "next"), "", "next");
+            addHtmlContent(createHyperLink(imageTag, constructTargetURL(ACTION_URL_SHOW_DIRECTORY_PAGE, cachedDirectoryEntry.getFullPath(), thumbnailPageNumber + 1), null));
         }
         addHtmlContent("</td></tr></table>");
     }
@@ -293,14 +295,16 @@ public class HtmlTemplateProcessor {
     public void addMainImageHtml(String imagePath, String previousImagePath, String nextImagePath) {
         addHtmlContent("<table><tr><td>");
         if (previousImagePath != null) {
-            addHtmlContent(createHyperLink("&lt;", constructTargetURL(ACTION_URL_SHOW_PHOTO_PAGE, previousImagePath), null));
+            String imageTag = createImage(constructTargetURL(ACTION_URL_SHOW_ICON, "previous"), "", "previous");
+            addHtmlContent(createHyperLink(imageTag, constructTargetURL(ACTION_URL_SHOW_PHOTO_PAGE, previousImagePath), null));
         }
         addHtmlContent("</td><td>");
         String imageTag = createImage(constructTargetURL(ACTION_URL_SHOW_PHOTO, imagePath), "image-main-regular", null);
         addHtmlContent(imageTag);
         addHtmlContent("</td><td>");
         if (nextImagePath != null) {
-            addHtmlContent(createHyperLink("&gt;", constructTargetURL(ACTION_URL_SHOW_PHOTO_PAGE, nextImagePath), null));
+            String imageTagNext = createImage(constructTargetURL(ACTION_URL_SHOW_ICON, "next"), "", "next");
+            addHtmlContent(createHyperLink(imageTagNext, constructTargetURL(ACTION_URL_SHOW_PHOTO_PAGE, nextImagePath), null));
         }
         addHtmlContent("</td></tr></table>");
     }
