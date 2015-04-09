@@ -93,6 +93,8 @@ public class InternalPhotoWebServer extends NanoHTTPD {
                 return displayImage(httpRequest.getParms().get(HtmlTemplateProcessor.PARAMETER_PATH), httpRequest, true);
             case HtmlTemplateProcessor.ACTION_URL_SHOW_PHOTO:
                 return displayImage(httpRequest.getParms().get(HtmlTemplateProcessor.PARAMETER_PATH), httpRequest, false);
+            case HtmlTemplateProcessor.ACTION_URL_SHOW_ICON:
+                return displayIcon(httpRequest.getParms().get(HtmlTemplateProcessor.PARAMETER_PATH), httpRequest);
             default:
                 response = get404Response(uri, httpRequest);
                 break;
@@ -140,6 +142,39 @@ public class InternalPhotoWebServer extends NanoHTTPD {
             }
         }
         return response;
+    }
+
+    /**
+     * Serve the icon image to the web client.
+     *
+     * @param iconName    The name of the icon to show.
+     * @param httpRequest The context HTTP-request.
+     */
+    private Response displayIcon(String iconName, IHTTPSession httpRequest) {
+        Response response;
+        int iconId = getIconResourceId(iconName);
+        if (iconName == null) {
+            response = get500Response(httpRequest);
+        } else if (iconId == -1) {
+            response = get404Response(iconName, httpRequest);
+        } else {
+            ResponseDataItem responseDataItem = getIconForDisplay(iconId);
+            response = new Response(Response.Status.OK, responseDataItem.getMimeType(), responseDataItem.getStreamToServe());
+        }
+        return response;
+    }
+
+    /**
+     * Convert an icon name string to id (this mechanism is used instead of just using the id to prevent hacking).
+     * @param iconName The string to convert to a resource id.
+     * @return The resource id of the icon, or -1 in case it is not a known name.
+     */
+    private int getIconResourceId(String iconName) {
+        int result = -1;
+        if ("logo".equals(iconName)) {
+            result = R.drawable.web_logo;
+        }
+        return result;
     }
 
     /**
@@ -620,6 +655,19 @@ public class InternalPhotoWebServer extends NanoHTTPD {
     }
 
     /**
+     * Get one of the icons used in the application as a response item.
+     *
+     * @param iconResourceId The resource id of the resource to show.
+     * @return A response data item.
+     */
+    private ResponseDataItem getIconForDisplay(int iconResourceId) {
+        // All icons are pngs.
+        String mimeType = "image/png";
+        InputStream stream = getContext().getResources().openRawResource(iconResourceId);
+        return new ResponseDataItem(stream, mimeType);
+    }
+
+    /**
      * Simple structure class to represent an item about to be served.
      */
     private static final class ResponseDataItem {
@@ -662,5 +710,6 @@ public class InternalPhotoWebServer extends NanoHTTPD {
             return streamToServe;
         }
     }
+
 
 }

@@ -60,6 +60,10 @@ public class SimplePhotoWebServerActivity extends ActionBarActivity {
         statusTextView = (TextView) findViewById(R.id.statusText);
         urlTextView = (TextView) findViewById(R.id.urlText);
 
+        // Not possible unfortunately, because of current minimum API-level.
+        //ActionBar actionBar = getActionBar();
+        //actionBar.setIcon(R.mipmap.ic_launcher);
+
         updateGUIStatus();
 
     }

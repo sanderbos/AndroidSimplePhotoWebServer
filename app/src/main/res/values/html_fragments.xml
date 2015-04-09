@@ -10,7 +10,7 @@
                 </head>\n
                 <body>\n
                     <div class=\'main-container position-center\'>\n
-                        <h3>||title||</h3>\n
+                        <h3><img src=\'/showIcon?path=logo\'/>||title||</h3>\n
                         ||content||
                     \n</div>\n
                 </body>\n

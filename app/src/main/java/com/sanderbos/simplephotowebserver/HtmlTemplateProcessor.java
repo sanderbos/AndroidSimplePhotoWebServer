@@ -46,6 +46,10 @@ public class HtmlTemplateProcessor {
      */
     public static final String ACTION_URL_SHOW_THUMBNAIL = "/showThumbnail";
 
+    /**
+     * Url photo action name (that displays an in-app icon).
+     */
+    public static final String ACTION_URL_SHOW_ICON = "/showIcon";
 
     /**
      * Keywords in the templates have the format ||keyword||
