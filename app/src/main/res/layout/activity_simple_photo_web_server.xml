@@ -9,7 +9,7 @@
     <ImageView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:id="@+id/logoView"
+        android:id="@+id/logoImageView"
         android:layout_alignParentTop="true"
         android:layout_centerHorizontal="true"
         android:layout_marginTop="10dp"
@@ -21,7 +21,7 @@
         android:textAppearance="?android:attr/textAppearanceLarge"
         android:text="@string/status_text_default_label"
         android:id="@+id/statusText"
-        android:layout_below="@+id/logoView"
+        android:layout_below="@+id/logoImageView"
         android:layout_centerHorizontal="true"
         android:layout_marginTop="1dp" />
 
