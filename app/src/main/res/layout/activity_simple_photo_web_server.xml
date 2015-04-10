@@ -13,7 +13,8 @@
         android:layout_alignParentTop="true"
         android:layout_centerHorizontal="true"
         android:layout_marginTop="10dp"
-        android:src="@drawable/gui_logo" />
+        android:src="@drawable/gui_logo"
+        android:contentDescription="@string/empty_logo_label"/>
 
     <TextView
         android:layout_width="wrap_content"
@@ -50,9 +51,7 @@
             android:text="@string/start_button_label"
             android:id="@+id/startButton"
             android:onClick="onStartButtonClicked"
-            android:layout_alignTop="@+id/stopButton"
-            android:layout_toLeftOf="@+id/urlText"
-            android:layout_toStartOf="@+id/urlText" />
+            />
 
         <Button
             android:layout_width="wrap_content"
@@ -60,9 +59,7 @@
             android:text="@string/stop_button_label"
             android:id="@+id/stopButton"
             android:onClick="onStopButtonClicked"
-            android:layout_centerVertical="true"
-            android:layout_toRightOf="@+id/urlText"
-            android:layout_toEndOf="@+id/urlText" />
+            />
     </LinearLayout>
 
 </RelativeLayout>
