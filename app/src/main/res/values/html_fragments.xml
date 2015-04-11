@@ -31,6 +31,7 @@
             .image-thumbnail-selected {border: 3px solid grey; }\n
             .image-main-regular {height: 300px; }\n
             .thumbnail-cell-regular {margin: 0px; padding: 0px; vertical-align: top; }\n
+            .image-download-icon {display: block; float: right; }\n
         ]]>
     </string>
     <string name="title_regular">Simple Photo Web Server</string>

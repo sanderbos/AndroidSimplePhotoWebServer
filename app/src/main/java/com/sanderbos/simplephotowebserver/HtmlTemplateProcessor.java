@@ -42,6 +42,11 @@ public class HtmlTemplateProcessor {
     public static final String ACTION_URL_SHOW_PHOTO = "/showPhoto";
 
     /**
+     * Url photo action name (that returns a binary photo image as an octal stream).
+     */
+    public static final String ACTION_URL_DOWNLOAD_FILE = "/downloadPhoto";
+
+    /**
      * Url photo thumbnail action name (that displays an binary image thumbnail).
      */
     public static final String ACTION_URL_SHOW_THUMBNAIL = "/showThumbnail";
@@ -295,16 +300,21 @@ public class HtmlTemplateProcessor {
     public void addMainImageHtml(String imagePath, String previousImagePath, String nextImagePath) {
         addHtmlContent("<table><tr><td>");
         if (previousImagePath != null) {
-            String imageTag = createImage(constructTargetURL(ACTION_URL_SHOW_ICON, "previous"), "", "previous");
-            addHtmlContent(createHyperLink(imageTag, constructTargetURL(ACTION_URL_SHOW_PHOTO_PAGE, previousImagePath), null));
+            String previousImageTag = createImage(constructTargetURL(ACTION_URL_SHOW_ICON, "previous"), "", "previous");
+            addHtmlContent(createHyperLink(previousImageTag, constructTargetURL(ACTION_URL_SHOW_PHOTO_PAGE, previousImagePath), null));
         }
         addHtmlContent("</td><td>");
+
         String imageTag = createImage(constructTargetURL(ACTION_URL_SHOW_PHOTO, imagePath), "image-main-regular", null);
         addHtmlContent(imageTag);
+        String downloadTag = createImage(constructTargetURL(ACTION_URL_SHOW_ICON, "download"), "image-download-icon", "Download");
+        addHtmlContent("<br/>");
+        addHtmlContent(createHyperLink(downloadTag, constructDownloadURL(ACTION_URL_DOWNLOAD_FILE, imagePath), null));
+
         addHtmlContent("</td><td>");
         if (nextImagePath != null) {
-            String imageTagNext = createImage(constructTargetURL(ACTION_URL_SHOW_ICON, "next"), "", "next");
-            addHtmlContent(createHyperLink(imageTagNext, constructTargetURL(ACTION_URL_SHOW_PHOTO_PAGE, nextImagePath), null));
+            String nextImageTag = createImage(constructTargetURL(ACTION_URL_SHOW_ICON, "next"), "", "next");
+            addHtmlContent(createHyperLink(nextImageTag, constructTargetURL(ACTION_URL_SHOW_PHOTO_PAGE, nextImagePath), null));
         }
         addHtmlContent("</td></tr></table>");
     }
@@ -331,7 +341,7 @@ public class HtmlTemplateProcessor {
     }
 
     /**
-     * Construct an action URL string, of the format action?path=pathValue
+     * Construct an action URL string, of the format action?path=pathParameterValue
      *
      * @param action             The base action URL
      * @param pathParameterValue The value to use for the path parameter.
@@ -339,6 +349,21 @@ public class HtmlTemplateProcessor {
      */
     private String constructTargetURL(String action, String pathParameterValue) {
         return MessageFormat.format("{0}?{1}={2}", action, PARAMETER_PATH, pathParameterValue);
+    }
+
+    /**
+     * Construct an URL string, of the format actionpathParameterValue. Because the filename
+     * is based on the url part excluding the query string, the file argument must not be in
+     * a query string.
+     *
+     * @param action             The base action URL
+     * @param pathParameterValue The path value to use in the URL.
+     * @return The constructed string.
+     */
+    private String constructDownloadURL(String action, String pathParameterValue) {
+        // No need to add extra /, as path parameter is already absolute (and even if it would
+        // not start with a '/' it would still work.
+        return MessageFormat.format("{0}{1}", action, pathParameterValue);
     }
 
     /**

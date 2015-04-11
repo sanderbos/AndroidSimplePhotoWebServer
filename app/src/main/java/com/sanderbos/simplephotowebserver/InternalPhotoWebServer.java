@@ -80,6 +80,15 @@ public class InternalPhotoWebServer extends NanoHTTPD {
         initializeCachedDirectories();
 
         String uri = httpRequest.getUri();
+        String pathParameter = httpRequest.getParms().get(HtmlTemplateProcessor.PARAMETER_PATH);
+
+        if (uri.startsWith(HtmlTemplateProcessor.ACTION_URL_DOWNLOAD_FILE)) {
+            // Manipulate parameters as download links have the path in the URL without query parameter
+            // Is of the format action{}path
+            pathParameter = uri.substring(HtmlTemplateProcessor.ACTION_URL_DOWNLOAD_FILE.length());
+            uri = HtmlTemplateProcessor.ACTION_URL_DOWNLOAD_FILE;
+        }
+
         Response response;
         switch (uri) {
             case "/default_style.css":
@@ -90,11 +99,13 @@ public class InternalPhotoWebServer extends NanoHTTPD {
             case HtmlTemplateProcessor.ACTION_URL_SHOW_PHOTO_PAGE:
                 return showMediaPage(httpRequest);
             case HtmlTemplateProcessor.ACTION_URL_SHOW_THUMBNAIL:
-                return displayImage(httpRequest.getParms().get(HtmlTemplateProcessor.PARAMETER_PATH), httpRequest, true);
+                return displayImage(pathParameter, httpRequest, true, false);
             case HtmlTemplateProcessor.ACTION_URL_SHOW_PHOTO:
-                return displayImage(httpRequest.getParms().get(HtmlTemplateProcessor.PARAMETER_PATH), httpRequest, false);
+                return displayImage(pathParameter, httpRequest, false, false);
+            case HtmlTemplateProcessor.ACTION_URL_DOWNLOAD_FILE:
+                return displayImage(pathParameter, httpRequest, false, true);
             case HtmlTemplateProcessor.ACTION_URL_SHOW_ICON:
-                return displayIcon(httpRequest.getParms().get(HtmlTemplateProcessor.PARAMETER_PATH), httpRequest);
+                return displayIcon(pathParameter, httpRequest);
             default:
                 response = get404Response(uri, httpRequest);
                 break;
@@ -105,13 +116,14 @@ public class InternalPhotoWebServer extends NanoHTTPD {
     /**
      * Serve the thumbnail image to the web client.
      *
-     * @param imagePath     The path to the image (which is not the path to the thumbnail, but to
-     *                      the actual image).
-     * @param httpRequest   The context HTTP-request.
-     * @param showThumbnail Whether or not to show the regular image (false) or its thumbnail (true).
+     * @param imagePath        The path to the image (which is not the path to the thumbnail, but to
+     *                         the actual image).
+     * @param httpRequest      The context HTTP-request.
+     * @param showThumbnail    Whether or not to show the regular image (false) or its thumbnail (true).
+     * @param useDownloadMimeType If set to true, the mime type used is such that it will trigger a download in the browser.
      * @return The http response (either the image, or an error page that is never seen).
      */
-    private Response displayImage(String imagePath, IHTTPSession httpRequest, boolean showThumbnail) {
+    private Response displayImage(String imagePath, IHTTPSession httpRequest, boolean showThumbnail, boolean useDownloadMimeType) {
         Response response;
         if (imagePath == null) {
             response = get500Response(httpRequest);
@@ -133,7 +145,11 @@ public class InternalPhotoWebServer extends NanoHTTPD {
                     responseDataItem = new ResponseDataItem(streamToServe, mimeType);
                 }
                 // NanoHTTPD will close the stream.
-                response = new Response(Response.Status.OK, responseDataItem.getMimeType(), responseDataItem.getStreamToServe());
+                String mimeType = responseDataItem.getMimeType();
+                if (useDownloadMimeType) {
+                    mimeType = "application/octet-stream";
+                }
+                response = new Response(Response.Status.OK, mimeType, responseDataItem.getStreamToServe());
             } catch (FileNotFoundException e) {
                 return get404Response(imagePath, httpRequest);
             } catch (IOException e) {
@@ -166,19 +182,25 @@ public class InternalPhotoWebServer extends NanoHTTPD {
 
     /**
      * Convert an icon name string to id (this mechanism is used instead of just using the id to prevent hacking).
+     *
      * @param iconName The string to convert to a resource id.
      * @return The resource id of the icon, or -1 in case it is not a known name.
      */
     private int getIconResourceId(String iconName) {
         int result = -1;
-        if ("logo".equals(iconName)) {
-            result = R.drawable.web_logo;
-        } else if ("previous".equals(iconName)) {
-            result = R.drawable.web_previous;
-        } else if ("next".equals(iconName)) {
-            result = R.drawable.web_next;
-        } else if ("download".equals(iconName)) {
-            result = R.drawable.web_download;
+        switch (iconName) {
+            case "logo":
+                result = R.drawable.web_logo;
+                break;
+            case "previous":
+                result = R.drawable.web_previous;
+                break;
+            case "next":
+                result = R.drawable.web_next;
+                break;
+            case "download":
+                result = R.drawable.web_download;
+                break;
         }
         return result;
     }
