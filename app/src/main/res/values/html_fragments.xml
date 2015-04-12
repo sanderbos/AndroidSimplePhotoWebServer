@@ -1,5 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="default_css" formatted="false">
+        <![CDATA[
+            body { font-family:Arial, sans-serif; background: black; color: white; }\n
+            table { margin: 0px; border-collapse: collapse; }\n
+            td, th { padding: .3em; border: 0px #ccc solid; vertical-align: center; }\n
+            h3 { text-align: center; }\n
+            .h3-about { text-align: left; }\n
+            .main-container {margin: 10px 10px 10px 10px; padding: 20px; }\n
+            .position-center {position: absolute; left: 25%; }\n
+            .about-link {font-size: 50%; }\n
+            a {color: white; }\n
+            a:visited {color: white; }\n
+            .image-thumbnail {width: 40px; }\n
+            .image-thumbnail-selected {border: 3px solid grey; }\n
+            .image-main-regular {height: 300px; }\n
+            .thumbnail-cell-regular {margin: 0px; padding: 0px; vertical-align: top; }\n
+            .image-download-icon {display: block; float: right; }\n
+        ]]>
+    </string>
     <string name="html_main_template">
         <![CDATA[
             <!doctype html>\n
@@ -10,30 +29,49 @@
                 </head>\n
                 <body>\n
                     <div class=\'main-container position-center\'>\n
-                        <h3><img src=\'/showIcon?path=logo\'/>||title||</h3>\n
+                        <h3><a href=\'/\'><img src=\'/showIcon?path=logo\'/></a>||title||</h3>\n
                         ||content||
+                        <div class=\'about-link\'>\n
+                            <a href=\'/about\'>[About]</a>
+                        </div>\n
                     \n</div>\n
                 </body>\n
             </html>\n
         ]]>
     </string>
-    <string name="default_css">
-        <![CDATA[
-            body { font-family:Arial, sans-serif; background: black; color: white; }\n
-            table { margin: 0px; border-collapse: collapse; }\n
-            td, th { padding: .3em; border: 0px #ccc solid; vertical-align: center; }\n
-            h3 { text-align: center; }\n
-            .main-container {margin: 10px 10px 10px 10px; padding: 20px; }\n
-            .position-center {position: absolute; left: 25%; }\n
-            a {color: white; }\n
-            a:visited {color: white; }\n
-            .image-thumbnail {width: 40px; }\n
-            .image-thumbnail-selected {border: 3px solid grey; }\n
-            .image-main-regular {height: 300px; }\n
-            .thumbnail-cell-regular {margin: 0px; padding: 0px; vertical-align: top; }\n
-            .image-download-icon {display: block; float: right; }\n
-        ]]>
-    </string>
+    <!-- In the end do not use template above because it caused too many issues -->
+    <string name="about_page_html"><![CDATA[
+            <!doctype html>\n
+            <html>\n
+                <head>\n
+                    <title>About</title>\n
+                    <link rel=\'stylesheet\' href=\'/default_style.css\' type=\'text/css\'></link>\n
+                </head>\n
+                <body>\n
+                    <div class=\'main-container\'>\n
+                        <a href=\'/\'><img src=\'/showIcon?path=logo\'/></a>\n
+                        <h3 class=\'h3-about\'>About</h3>\n
+                        This is a simple web server to show photos stored on an Android device in a web browser.
+                        <h3 class=\'h3-about\'>Questions comments concerns?</h3>
+                        You can contact me at sander@sanderbos.com.
+                        <h3 class=\'h3-about\'>Third party licenses</h3>
+                        This software uses NanoHTTPD, which has the following license:
+                        <pre>
+NanoHTTPD Copyright ( c ) 2012-2013 by Paul S. Hawke, 2001,2005-2013 by Jarno Elonen, 2010 by Konstantinos Togias. All rights reserved.\n
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:\n
+Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.\n
+Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.\n
+Neither the name of the NanoHttpd organization nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.\n
+THIS SOFTWARE ([NanoHTTPD]) IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,\n
+THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS\n
+BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE\n
+GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,\n
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.\n
+                        </pre>
+                    \n</div>\n
+                </body>\n
+            </html>\n
+    ]]></string>
     <string name="title_regular">Simple Photo Web Server</string>
     <string name="title_404">404 Not found: ||uri|| was not found</string>
     <string name="title_500">500 Error processing request: Cannot process \'||uri||\'</string>

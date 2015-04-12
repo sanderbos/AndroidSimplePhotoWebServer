@@ -93,6 +93,8 @@ public class InternalPhotoWebServer extends NanoHTTPD {
         switch (uri) {
             case "/default_style.css":
                 return getDefaultCssReponse();
+            case "/about":
+                return getAboutPage();
             case "/":
                 return displayPhotoPageAsHtml(null);
             case HtmlTemplateProcessor.ACTION_URL_SHOW_DIRECTORY_PAGE:
@@ -116,10 +118,10 @@ public class InternalPhotoWebServer extends NanoHTTPD {
     /**
      * Serve the thumbnail image to the web client.
      *
-     * @param imagePath        The path to the image (which is not the path to the thumbnail, but to
-     *                         the actual image).
-     * @param httpRequest      The context HTTP-request.
-     * @param showThumbnail    Whether or not to show the regular image (false) or its thumbnail (true).
+     * @param imagePath           The path to the image (which is not the path to the thumbnail, but to
+     *                            the actual image).
+     * @param httpRequest         The context HTTP-request.
+     * @param showThumbnail       Whether or not to show the regular image (false) or its thumbnail (true).
      * @param useDownloadMimeType If set to true, the mime type used is such that it will trigger a download in the browser.
      * @return The http response (either the image, or an error page that is never seen).
      */
@@ -325,6 +327,16 @@ public class InternalPhotoWebServer extends NanoHTTPD {
             }
         }
         return response;
+    }
+
+    /**
+     * Get the about page as an HTTP response.
+     *
+     * @return The about page.
+     */
+    private Response getAboutPage() {
+        String content = context.getResources().getText(R.string.about_page_html).toString();
+        return new NanoHTTPD.Response(content);
     }
 
     /**
