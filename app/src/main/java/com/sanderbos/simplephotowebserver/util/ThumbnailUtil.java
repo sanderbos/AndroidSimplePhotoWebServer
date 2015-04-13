@@ -2,11 +2,9 @@ package com.sanderbos.simplephotowebserver.util;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.media.ThumbnailUtils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
-import java.io.IOError;
 import java.io.IOException;
 
 /**

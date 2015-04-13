@@ -23,11 +23,6 @@ public class CacheFileEntry {
     private String thumbnailPath;
 
     /**
-     * All cached entries share the same cache registry.
-     */
-    private CacheRegistry cache;
-
-    /**
      * Has the media database queried for a thumbnail for this image?
      */
     private boolean checkedForMediaStoreThumbnail = false;
@@ -40,9 +35,7 @@ public class CacheFileEntry {
     public CacheFileEntry(File file, CacheRegistry cache) {
         this.path = file.getAbsolutePath();
         this.lastModificationTimestamp = file.lastModified();
-        this.cache = cache;
-
-        this.cache.registerFile(this);
+        cache.registerFile(this);
     }
 
     /**

@@ -46,6 +46,11 @@ public class SimplePhotoWebServerActivity extends ActionBarActivity {
     private TextView urlTextView;
 
     /**
+     * Reference to wifi broadcast receiver.
+     */
+    private WifiBroadcastReceiver wifiBroadcastReceiver;
+
+    /**
      * onCreate implementation, get references to screen items and set up initial state.
      *
      * @param savedInstanceState Previous state of activity.
@@ -65,6 +70,8 @@ public class SimplePhotoWebServerActivity extends ActionBarActivity {
         //actionBar.setIcon(R.mipmap.ic_launcher);
 
         updateGUIStatus();
+
+        this.wifiBroadcastReceiver = new WifiBroadcastReceiver(this);
 
     }
 
@@ -118,6 +125,41 @@ public class SimplePhotoWebServerActivity extends ActionBarActivity {
     protected void onStop() {
         stopWebServer();
         super.onStop();
+    }
+
+    /**
+     * Override of onResume to register connectivity broadcast receiver.
+     */
+    @Override
+    protected void onResume() {
+        wifiBroadcastReceiver.registerReceiver(this);
+        super.onResume();
+    }
+
+    /**
+     * Override of onPause to unregister connectivity broadcast receiver.
+     */
+    @Override
+    protected void onPause() {
+        wifiBroadcastReceiver.unregisterReceiver(this);
+        super.onPause();
+    }
+
+    /**
+     * Call this method if there may be a change in the Wifi connectedness.
+     */
+    public void onWifiChange() {
+        try {
+            // If the Wifi was disabled but the server is running, stop it now.
+            if (!NetworkUtil.isWifiEnabled(this) && isWebServerRunning()) {
+                stopWebServer();
+            }
+            // It could be that Wifi was enabled, in that case enable the start button.
+            updateGUIStatus();
+        } catch (Exception exception) {
+            // It is possible that this activity is no longer valid, in that case
+            // simply ignore exceptions.
+        }
     }
 
     /**

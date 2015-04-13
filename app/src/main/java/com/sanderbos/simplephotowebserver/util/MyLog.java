@@ -1,6 +1,5 @@
 package com.sanderbos.simplephotowebserver.util;
 
-import android.os.Message;
 import android.util.Log;
 
 import java.text.MessageFormat;
