@@ -262,6 +262,7 @@ public class HtmlTemplateProcessor {
         int index;
         int currentColumnIndex = 0;
 
+        addHtmlContent("<div class='thumbnail-table-div'>");
         addHtmlContent("<table><tr>");
         // This always renders an entire table
         for (index = firstItem; index < lastItem; index++) {
@@ -280,6 +281,7 @@ public class HtmlTemplateProcessor {
             }
         }
         addHtmlContent("</tr></table>");
+        addHtmlContent("</div>");
 
         addHtmlContent("</td><td>");
         if (index < fileEntries.size()) {
@@ -327,16 +329,19 @@ public class HtmlTemplateProcessor {
      */
     private void addThumbnailHtml(CacheFileEntry fileEntry, boolean isSelectedImage) {
         String cellCssClass = "thumbnail-cell-regular";
-        addHtmlContent("<td class=\"" + cellCssClass + "\">");
-        String imageCssClass;
         if (isSelectedImage) {
-            imageCssClass = "image-thumbnail image-thumbnail-selected";
-        } else {
-            imageCssClass = "image-thumbnail";
+            cellCssClass += " image-thumbnail-selected";
         }
-        String imageTag = createImage(constructTargetURL(ACTION_URL_SHOW_THUMBNAIL, fileEntry.getFullPath()), imageCssClass, null);
+        addHtmlContent("<td class=\"" + cellCssClass + "\">");
+        if (isSelectedImage) {
+            addHtmlContent("<div class='thumbnail-cell-div'>");
+        } else {
+            addHtmlContent("<div class='thumbnail-cell-div'>");
+        }
+        String imageTag = createImage(constructTargetURL(ACTION_URL_SHOW_THUMBNAIL, fileEntry.getFullPath()), "image-thumbnail", null);
         String imageTagWithHyperLink = createHyperLink(imageTag, constructTargetURL(ACTION_URL_SHOW_PHOTO_PAGE, fileEntry.getFullPath()), null);
         addHtmlContent(imageTagWithHyperLink);
+        addHtmlContent("</div>");
         addHtmlContent("</td>");
     }
 
