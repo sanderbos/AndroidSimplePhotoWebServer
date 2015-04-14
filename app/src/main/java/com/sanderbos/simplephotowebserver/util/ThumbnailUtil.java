@@ -42,7 +42,11 @@ public class ThumbnailUtil {
         // but then I must know the height.
         FileInputStream imageInputStream = new FileInputStream(pathToImage);
         try {
-            Bitmap imageBitmap = BitmapFactory.decodeStream(imageInputStream);
+            // The scale is set to 8 for performance, must be power of 2 setting it to 16 (smaller) did not make performance better.
+            BitmapFactory.Options bitmapOptions = new BitmapFactory.Options();
+            bitmapOptions.inSampleSize = 8;
+
+            Bitmap imageBitmap = BitmapFactory.decodeStream(imageInputStream, null, bitmapOptions);
             try {
                 int scaledHeight = (int) (widthForThumbnail / ((double) imageBitmap.getWidth() / (double) imageBitmap.getHeight()));
 
