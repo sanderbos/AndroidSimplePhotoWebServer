@@ -247,8 +247,12 @@ public class HtmlTemplateProcessor {
      *
      * @param cachedDirectoryEntry The directory whose content to show.
      * @param requestState         The request being displayed.
+     * @return For convenience, return the full image path of the first
+     * thumbnail added (otherwise logic to get that that would have to be duplicated).
      */
-    public void addDirectoryContentsAsThumbnails(CacheDirectoryEntry cachedDirectoryEntry, MediaRequestState requestState) {
+    public String addDirectoryContentsAsThumbnails(CacheDirectoryEntry cachedDirectoryEntry, MediaRequestState requestState) {
+        String selectedImagePath = requestState.getCurrentImagePath();
+
         List<CacheFileEntry> fileEntries = cachedDirectoryEntry.getFileList();
         int thumbnailPageNumber = requestState.getCurrentThumbnailPage();
         if (thumbnailPageNumber < 0) {
@@ -281,7 +285,14 @@ public class HtmlTemplateProcessor {
 
             if (index < fileEntries.size()) {
                 CacheFileEntry fileEntry = fileEntries.get(index);
-                boolean isSelectedImage = fileEntry.getFullPath().equals((requestState.getCurrentImagePath()));
+
+                // This is logic that will make the selected image the first thumbnail in
+                // case there is no selected image yet.
+                if (selectedImagePath == null) {
+                    selectedImagePath = fileEntry.getFullPath();
+                }
+
+                boolean isSelectedImage = fileEntry.getFullPath().equals(selectedImagePath);
                 addThumbnailHtml(fileEntry, isSelectedImage);
             }
         }
@@ -295,6 +306,8 @@ public class HtmlTemplateProcessor {
             addHtmlContent(createHyperLink(imageTag, constructTargetURL(ACTION_URL_SHOW_DIRECTORY_PAGE, cachedDirectoryEntry.getFullPath(), thumbnailPageNumber + 1), null));
         }
         addHtmlContent("</td></tr></table>");
+
+        return selectedImagePath;
     }
 
     /**

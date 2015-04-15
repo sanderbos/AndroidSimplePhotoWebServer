@@ -384,7 +384,12 @@ public class InternalPhotoWebServer extends NanoHTTPD {
 
         // If a directory is selected, show its contents as thumbnails.
         if (currentPathCachedDirectory != null) {
-            htmlOutput.addDirectoryContentsAsThumbnails(currentPathCachedDirectory, currentDisplayState);
+            String selectedThumbnailImagePath = htmlOutput.addDirectoryContentsAsThumbnails(currentPathCachedDirectory, currentDisplayState);
+            if (selectedThumbnailImagePath != null && currentDisplayState.getCurrentImagePath() == null) {
+                // For better user experience, default to the first thumbnail shown in case no image specifically selected.
+                currentDisplayState.setCurrentImagePath(selectedThumbnailImagePath);
+            }
+
             htmlOutput.addSeparator();
         }
 
