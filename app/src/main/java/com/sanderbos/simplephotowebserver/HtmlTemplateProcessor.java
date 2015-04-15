@@ -27,6 +27,11 @@ public class HtmlTemplateProcessor {
     public static final String PARAMETER_PAGE_NUMBER = "page";
 
     /**
+     * Parameter used to set that the directory structure should be made visible.
+     */
+    public static final String PARAMETER_FORCE_SHOW_DIRECTORY = "forceShowDirStructure";
+
+    /**
      * Url directory page parameter name.
      */
     public static final String ACTION_URL_SHOW_DIRECTORY_PAGE = "/showDirectoryPage";
@@ -462,6 +467,46 @@ public class HtmlTemplateProcessor {
         }
         String textToLookup = SEPARATOR + keyword + SEPARATOR;
         return template.replace(textToLookup, replacementValue);
+    }
+
+    /**
+     * Create a toggle hyperlink for the directory structure. Based on the current request, make
+     * that an expand or collapse icon.
+     *
+     * @param currentDisplayState Information about the current http request being processed, used
+     *                            to create a hyperlink to the current page in the toggle.
+     */
+    public void addDirectoryContentToggle(MediaRequestState currentDisplayState) {
+        // TODO: This method is now 'not ideal'. perhaps revisit later.
+        if (currentDisplayState == null) {
+            currentDisplayState = new MediaRequestState();
+        }
+        StringBuilder hyperLinkURL = new StringBuilder();
+        String currentPath;
+        if (currentDisplayState.getCurrentImagePath() == null) {
+            hyperLinkURL.append(ACTION_URL_SHOW_DIRECTORY_PAGE);
+            currentPath = currentDisplayState.getCurrentDirectoryPath();
+        } else {
+            hyperLinkURL.append(ACTION_URL_SHOW_PHOTO_PAGE);
+            currentPath = currentDisplayState.getCurrentImagePath();
+        }
+        // Hack to prevent making the rest of this method even more unreadable
+        hyperLinkURL.append("?dummy=dummy");
+        if (currentPath != null) {
+            hyperLinkURL.append("&" + PARAMETER_PATH + "=" + currentPath);
+        }
+        if (currentDisplayState.getCurrentThumbnailPage() != -1) {
+            hyperLinkURL.append("&" + PARAMETER_PAGE_NUMBER + "=" + String.valueOf(currentDisplayState.getCurrentThumbnailPage()));
+        }
+
+        String imageFile;
+        if (currentDisplayState.getCurrentDirectoryPath() == null || currentDisplayState.isForceShowDirectoryStructure()) {
+            imageFile = "/showIcon?path=collapse";
+        } else {
+            imageFile = "/showIcon?path=expand";
+            hyperLinkURL.append("&" + PARAMETER_FORCE_SHOW_DIRECTORY + "=true");
+        }
+        addHtmlContent(createHyperLink(createImage(imageFile, "", ""), hyperLinkURL.toString(), ""));
     }
 
 }

@@ -203,6 +203,12 @@ public class InternalPhotoWebServer extends NanoHTTPD {
             case "download":
                 result = R.drawable.web_download;
                 break;
+            case "expand":
+                result = R.drawable.web_expand;
+                break;
+            case "collapse":
+                result = R.drawable.web_collapse;
+                break;
         }
         return result;
     }
@@ -360,14 +366,23 @@ public class InternalPhotoWebServer extends NanoHTTPD {
             currentPathCachedDirectory = getOrRetrieveCachedDirectory(currentDisplayState.getCurrentDirectoryPath());
         }
 
-        htmlOutput.addHtmlContent("<ul>");
-        for (CacheDirectoryEntry topLevelDirectory : topLevelDirectories) {
-            htmlOutput.createDirectoryTree(topLevelDirectory, currentPathCachedDirectory);
+        if (currentPathCachedDirectory != null) {
+            htmlOutput.addHtmlContent("<div class='directory-box-selection'>");
+            htmlOutput.addDirectoryContentToggle(currentDisplayState);
+            htmlOutput.addHtmlContent("<b>" + currentPathCachedDirectory.getName() + "</b>");
+            htmlOutput.addHtmlContent("</div>");
         }
-        htmlOutput.addHtmlContent("</ul>");
+        if (currentPathCachedDirectory == null || currentDisplayState.isForceShowDirectoryStructure()) {
+            htmlOutput.addHtmlContent("<div class='directory-box-chooser'>");
+            htmlOutput.addHtmlContent("<ul>");
+            for (CacheDirectoryEntry topLevelDirectory : topLevelDirectories) {
+                htmlOutput.createDirectoryTree(topLevelDirectory, currentPathCachedDirectory);
+            }
+            htmlOutput.addHtmlContent("</ul>");
+            htmlOutput.addHtmlContent("</div>");
+        }
 
         // If a directory is selected, show its contents as thumbnails.
-        htmlOutput.addSeparator();
         if (currentPathCachedDirectory != null) {
             htmlOutput.addDirectoryContentsAsThumbnails(currentPathCachedDirectory, currentDisplayState);
             htmlOutput.addSeparator();
@@ -600,6 +615,9 @@ public class InternalPhotoWebServer extends NanoHTTPD {
                 result.setCurrentThumbnailPage(extractedCurrentPage);
             }
         }
+        String forceShowDirectoryStructure = httpRequest.getParms().get(HtmlTemplateProcessor.PARAMETER_FORCE_SHOW_DIRECTORY);
+        result.setForceShowDirectoryStructure(forceShowDirectoryStructure != null);
+
         return result;
     }
 

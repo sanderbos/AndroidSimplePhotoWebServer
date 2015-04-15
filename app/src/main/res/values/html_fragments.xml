@@ -20,6 +20,8 @@
             // These style are here to ensure the size of the thumbnail table is fixed, for a more stable view. \n
             .thumbnail-table-div {height: 100px; overflow: hidden; }\n
             .thumbnail-cell-div {max-height: 40px; overflow: hidden; }\n
+            .directory-box-selection {border: 3px solid white; padding-left: 4px; }\n
+            .directory-box-chooser {border: 1px solid white; margin-left: 5px; }\n
         ]]>
     </string>
     <string name="html_main_template">

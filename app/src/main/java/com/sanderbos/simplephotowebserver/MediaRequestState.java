@@ -19,6 +19,11 @@ public class MediaRequestState {
      */
     private int currentThumbnailPage = -1;
 
+    /**
+     * Whether a special parameter is set to force showing the directory structure.
+     */
+    private boolean forceShowDirectoryStructure;
+
 
     /**
      * Get current directory path.
@@ -67,5 +72,21 @@ public class MediaRequestState {
      */
     public void setCurrentThumbnailPage(int currentThumbnailPage) {
         this.currentThumbnailPage = currentThumbnailPage;
+    }
+
+    /**
+     * Set whether the directory structure should be shown.
+     * @param forceShowDirectoryStructure Whether or not the directory structure should be shown.
+     */
+    public void setForceShowDirectoryStructure(boolean forceShowDirectoryStructure) {
+        this.forceShowDirectoryStructure = forceShowDirectoryStructure;
+    }
+
+    /**
+     * Get whether the directory structure should be shown, even in case a photo is selected.
+     * @return True in case the directory structure should be shown (false is default case).
+     */
+    public boolean isForceShowDirectoryStructure() {
+        return this.forceShowDirectoryStructure;
     }
 }
