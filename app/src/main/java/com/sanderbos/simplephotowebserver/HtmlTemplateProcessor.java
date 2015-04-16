@@ -260,7 +260,7 @@ public class HtmlTemplateProcessor {
             thumbnailPageNumber = 0;
         }
 
-        addHtmlContent("<table><tr><td>");
+        addHtmlContent("<table class='position-block-center'><tr><td>");
         if (thumbnailPageNumber > 0) {
             String imageTag = createImage(constructTargetURL(ACTION_URL_SHOW_ICON, "previous"), "", getResourceText(R.string.html_text_previous_page));
             addHtmlContent(createHyperLink(imageTag, constructTargetURL(ACTION_URL_SHOW_DIRECTORY_PAGE, cachedDirectoryEntry.getFullPath(), thumbnailPageNumber - 1), null));
@@ -319,7 +319,7 @@ public class HtmlTemplateProcessor {
      * @param nextImagePath     The full path of a next image in the list, if such an image exists.
      */
     public void addMainImageHtml(String imagePath, String previousImagePath, String nextImagePath) {
-        addHtmlContent("<table><tr><td>");
+        addHtmlContent("<table class='position-block-center'><tr><td>");
         if (previousImagePath != null) {
             String previousImageTag = createImage(constructTargetURL(ACTION_URL_SHOW_ICON, "previous"), "", getResourceText(R.string.html_text_previous_image));
             addHtmlContent(createHyperLink(previousImageTag, constructTargetURL(ACTION_URL_SHOW_PHOTO_PAGE, previousImagePath), null));
