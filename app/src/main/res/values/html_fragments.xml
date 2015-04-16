@@ -15,7 +15,7 @@
             a:visited {color: white; }\n
             .image-thumbnail {width: 40px; }\n
             .image-thumbnail-selected {border: 2px solid grey; background: grey; }\n
-            .image-main-regular {height: 300px; }\n
+            .image-main-regular {height: 50vh; }\n
             .thumbnail-cell-regular {margin: 0px; padding: 0px; vertical-align: top; }\n
             .image-download-icon {display: block; float: right; }\n
             // These style are here to ensure the size of the thumbnail table is fixed, for a more stable view. \n
