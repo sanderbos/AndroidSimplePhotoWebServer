@@ -11,4 +11,11 @@
     <string name="status_text_default_label">Status...</string>
     <string name="url_text_default_label">none</string>
     <string name="number_default_httpd_port">9009</string>
+    <string name="html_text_previous_page">Previous page</string>
+    <string name="html_text_next_page">Next page</string>
+    <string name="html_text_previous_image">Previous image</string>
+    <string name="html_text_next_image">Next image</string>
+    <string name="html_text_download">Download</string>
+    <string name="html_text_expand_folder_selection">Expand to select folder</string>
+    <string name="html_text_collapse_folder_selection">Collapse folder selection</string>
 </resources>

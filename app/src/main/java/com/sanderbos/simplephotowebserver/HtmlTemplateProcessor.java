@@ -1,6 +1,7 @@
 package com.sanderbos.simplephotowebserver;
 
 import android.app.Activity;
+import android.text.TextUtils;
 
 import com.sanderbos.simplephotowebserver.cache.CacheDirectoryEntry;
 import com.sanderbos.simplephotowebserver.cache.CacheFileEntry;
@@ -261,7 +262,7 @@ public class HtmlTemplateProcessor {
 
         addHtmlContent("<table><tr><td>");
         if (thumbnailPageNumber > 0) {
-            String imageTag = createImage(constructTargetURL(ACTION_URL_SHOW_ICON, "previous"), "", "previous");
+            String imageTag = createImage(constructTargetURL(ACTION_URL_SHOW_ICON, "previous"), "", getResourceText(R.string.html_text_previous_page));
             addHtmlContent(createHyperLink(imageTag, constructTargetURL(ACTION_URL_SHOW_DIRECTORY_PAGE, cachedDirectoryEntry.getFullPath(), thumbnailPageNumber - 1), null));
         }
         addHtmlContent("</td><td>");
@@ -302,7 +303,7 @@ public class HtmlTemplateProcessor {
         addHtmlContent("</td><td>");
         if (index < fileEntries.size()) {
             // There are more entries beyond the ones now shown.
-            String imageTag = createImage(constructTargetURL(ACTION_URL_SHOW_ICON, "next"), "", "next");
+            String imageTag = createImage(constructTargetURL(ACTION_URL_SHOW_ICON, "next"), "", getResourceText(R.string.html_text_next_page));
             addHtmlContent(createHyperLink(imageTag, constructTargetURL(ACTION_URL_SHOW_DIRECTORY_PAGE, cachedDirectoryEntry.getFullPath(), thumbnailPageNumber + 1), null));
         }
         addHtmlContent("</td></tr></table>");
@@ -320,20 +321,20 @@ public class HtmlTemplateProcessor {
     public void addMainImageHtml(String imagePath, String previousImagePath, String nextImagePath) {
         addHtmlContent("<table><tr><td>");
         if (previousImagePath != null) {
-            String previousImageTag = createImage(constructTargetURL(ACTION_URL_SHOW_ICON, "previous"), "", "previous");
+            String previousImageTag = createImage(constructTargetURL(ACTION_URL_SHOW_ICON, "previous"), "", getResourceText(R.string.html_text_previous_image));
             addHtmlContent(createHyperLink(previousImageTag, constructTargetURL(ACTION_URL_SHOW_PHOTO_PAGE, previousImagePath), null));
         }
         addHtmlContent("</td><td>");
 
         String imageTag = createImage(constructTargetURL(ACTION_URL_SHOW_PHOTO, imagePath), "image-main-regular", null);
         addHtmlContent(imageTag);
-        String downloadTag = createImage(constructTargetURL(ACTION_URL_SHOW_ICON, "download"), "image-download-icon", "Download");
+        String downloadTag = createImage(constructTargetURL(ACTION_URL_SHOW_ICON, "download"), "image-download-icon", getResourceText(R.string.html_text_download));
         addHtmlContent("<br/>");
         addHtmlContent(createHyperLink(downloadTag, constructDownloadURL(ACTION_URL_DOWNLOAD_FILE, imagePath), null));
 
         addHtmlContent("</td><td>");
         if (nextImagePath != null) {
-            String nextImageTag = createImage(constructTargetURL(ACTION_URL_SHOW_ICON, "next"), "", "next");
+            String nextImageTag = createImage(constructTargetURL(ACTION_URL_SHOW_ICON, "next"), "", getResourceText(R.string.html_text_next_image));
             addHtmlContent(createHyperLink(nextImageTag, constructTargetURL(ACTION_URL_SHOW_PHOTO_PAGE, nextImagePath), null));
         }
         addHtmlContent("</td></tr></table>");
@@ -422,18 +423,18 @@ public class HtmlTemplateProcessor {
     /**
      * Construct an img tag.
      *
-     * @param sourceURL The url to use in the source.
-     * @param cssClass  Optional css class for use with the image tag.
-     * @param altText   Optional alt attribute text.
+     * @param sourceURL   The url to use in the source.
+     * @param cssClass    Optional css class for use with the image tag.
+     * @param toolTipText Optional tooltip (title) attribute text.
      * @return The text of an image.
      */
-    private String createImage(String sourceURL, String cssClass, String altText) {
+    private String createImage(String sourceURL, String cssClass, String toolTipText) {
         String result = MessageFormat.format("<img src=\"{0}\"", sourceURL);
-        if (cssClass != null) {
+        if (!TextUtils.isEmpty(cssClass)) {
             result += MessageFormat.format(" class=\"{0}\"", cssClass);
         }
-        if (altText != null) {
-            result += MessageFormat.format(" alt=\"{0}\"", altText);
+        if (!TextUtils.isEmpty(toolTipText)) {
+            result += MessageFormat.format(" title=\"{0}\"", toolTipText);
         }
         result += "/>";
         return result;
@@ -513,13 +514,16 @@ public class HtmlTemplateProcessor {
         }
 
         String imageFile;
+        String altText;
         if (currentDisplayState.getCurrentDirectoryPath() == null || currentDisplayState.isForceShowDirectoryStructure()) {
             imageFile = "/showIcon?path=collapse";
+            altText = getResourceText(R.string.html_text_collapse_folder_selection);
         } else {
             imageFile = "/showIcon?path=expand";
+            altText = getResourceText(R.string.html_text_expand_folder_selection);
             hyperLinkURL.append("&" + PARAMETER_FORCE_SHOW_DIRECTORY + "=true");
         }
-        addHtmlContent(createHyperLink(createImage(imageFile, "", ""), hyperLinkURL.toString(), ""));
+        addHtmlContent(createHyperLink(createImage(imageFile, "", altText), hyperLinkURL.toString(), ""));
     }
 
 }
