@@ -24,6 +24,10 @@ public class MediaRequestState {
      */
     private boolean forceShowDirectoryStructure;
 
+    /**
+     * Whether or not the request state is for full screen mode.
+     */
+    private boolean inFullscreenMode;
 
     /**
      * Get current directory path.
@@ -88,5 +92,21 @@ public class MediaRequestState {
      */
     public boolean isForceShowDirectoryStructure() {
         return this.forceShowDirectoryStructure;
+    }
+
+    /**
+     * Whether or not the request state is in full screen mode.
+     * @return True in case the media request is for full screen mode.
+     */
+    public boolean isInFullscreenMode() {
+        return inFullscreenMode;
+    }
+
+    /**
+     * Set whether or not the request state is in full screen mode.
+     * @param  inFullscreenMode The new value for full screen mode.
+     */
+    public void setInFullscreenMode(boolean inFullscreenMode) {
+        this.inFullscreenMode = inFullscreenMode;
     }
 }

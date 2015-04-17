@@ -18,4 +18,6 @@
     <string name="html_text_download">Download</string>
     <string name="html_text_expand_folder_selection">Expand to select folder</string>
     <string name="html_text_collapse_folder_selection">Collapse folder selection</string>
+    <string name="html_text_fullscreen">Fullscreen mode</string>
+    <string name="html_text_exit_fullscreen">Exit fullscreen mode</string>
 </resources>

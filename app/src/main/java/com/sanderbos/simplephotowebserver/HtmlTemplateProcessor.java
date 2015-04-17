@@ -33,6 +33,11 @@ public class HtmlTemplateProcessor {
     public static final String PARAMETER_FORCE_SHOW_DIRECTORY = "forceShowDirStructure";
 
     /**
+     * Parameter used to set that full screen mode should be used to show photos.
+     */
+    public static final String PARAMETER_FULLSCREEN = "fullscreen";
+
+    /**
      * Url directory page parameter name.
      */
     public static final String ACTION_URL_SHOW_DIRECTORY_PAGE = "/showDirectoryPage";
@@ -118,6 +123,11 @@ public class HtmlTemplateProcessor {
     private String title = "";
 
     /**
+     * Whether to use the full screen template.
+     */
+    private boolean useFullscreenTemplate = false;
+
+    /**
      * Constructor, starts a new empty document.
      *
      * @param context Context for the HtmlTemplate object, used amongst other things to resolve string resources.
@@ -168,13 +178,25 @@ public class HtmlTemplateProcessor {
     }
 
     /**
+     * Set this field to use the special full screen template.
+     * @param useFullscreenTemplate The new value for using the full screen template.
+     */
+    public void setUseFullscreenTemplate(boolean useFullscreenTemplate) {
+        this.useFullscreenTemplate = useFullscreenTemplate;
+    }
+
+    /**
      * Get the html templating output.
      *
      * @return A string representing an HTML document.
      */
     public String getHtmlOutput() {
 
-        String result = getResourceText(R.string.html_main_template);
+        int templateId = R.string.html_main_template;
+        if (useFullscreenTemplate) {
+            templateId = R.string.html_fullscreen_template;
+        }
+        String result = getResourceText(templateId);
         result = replaceTemplateVariable(result, KEYWORD_TITLE, getTitle());
         result = replaceTemplateVariable(result, KEYWORD_CONTENT, content.toString());
         return result;
@@ -312,30 +334,50 @@ public class HtmlTemplateProcessor {
     }
 
     /**
-     * Add the image HTML for an image.
+     * Add the image HTML for an image, along with its buttons.
      *
      * @param imagePath         The full path of an image to show.
      * @param previousImagePath The full path of a previous image in the list, if such an image exists.
      * @param nextImagePath     The full path of a next image in the list, if such an image exists.
+     * @param inFullscreenMode  Whether we are currently using full screen mode.
      */
-    public void addMainImageHtml(String imagePath, String previousImagePath, String nextImagePath) {
+    public void addMainImageHtml(String imagePath, String previousImagePath, String nextImagePath, boolean inFullscreenMode) {
         addHtmlContent("<table class='position-block-center'><tr><td>");
         if (previousImagePath != null) {
             String previousImageTag = createImage(constructTargetURL(ACTION_URL_SHOW_ICON, "previous"), "", getResourceText(R.string.html_text_previous_image));
-            addHtmlContent(createHyperLink(previousImageTag, constructTargetURL(ACTION_URL_SHOW_PHOTO_PAGE, previousImagePath), null));
+            addHtmlContent(createHyperLink(previousImageTag, constructTargetURLForFullScreen(ACTION_URL_SHOW_PHOTO_PAGE, previousImagePath, inFullscreenMode), null));
         }
         addHtmlContent("</td><td>");
 
-        String imageTag = createImage(constructTargetURL(ACTION_URL_SHOW_PHOTO, imagePath), "image-main-regular", null);
+
+        String imageCssClass = "image-main-regular";
+        if (inFullscreenMode) {
+            imageCssClass = "image-main-fullscreen";
+        }
+        String imageTag = createImage(constructTargetURL(ACTION_URL_SHOW_PHOTO, imagePath), imageCssClass, null);
         addHtmlContent(imageTag);
-        String downloadTag = createImage(constructTargetURL(ACTION_URL_SHOW_ICON, "download"), "image-download-icon", getResourceText(R.string.html_text_download));
+
         addHtmlContent("<br/>");
+        String fullscreenIconName;
+        String fullscreenAlt;
+        if (inFullscreenMode) {
+            // If in fullscreen mode now, offer option to switch out of it.
+            fullscreenIconName = "exit_fullscreen";
+            fullscreenAlt = getResourceText(R.string.html_text_exit_fullscreen);
+        } else {
+            fullscreenIconName = "fullscreen";
+            fullscreenAlt = getResourceText(R.string.html_text_fullscreen);
+        }
+        String fullScreenTag = createImage(constructTargetURL(ACTION_URL_SHOW_ICON, fullscreenIconName), "image-fullscreen-icon", fullscreenAlt);
+        addHtmlContent(createHyperLink(fullScreenTag, constructTargetURLForFullScreen(ACTION_URL_SHOW_PHOTO_PAGE, imagePath, !inFullscreenMode), null));
+
+        String downloadTag = createImage(constructTargetURL(ACTION_URL_SHOW_ICON, "download"), "image-download-icon", getResourceText(R.string.html_text_download));
         addHtmlContent(createHyperLink(downloadTag, constructDownloadURL(ACTION_URL_DOWNLOAD_FILE, imagePath), null));
 
         addHtmlContent("</td><td>");
         if (nextImagePath != null) {
             String nextImageTag = createImage(constructTargetURL(ACTION_URL_SHOW_ICON, "next"), "", getResourceText(R.string.html_text_next_image));
-            addHtmlContent(createHyperLink(nextImageTag, constructTargetURL(ACTION_URL_SHOW_PHOTO_PAGE, nextImagePath), null));
+            addHtmlContent(createHyperLink(nextImageTag, constructTargetURLForFullScreen(ACTION_URL_SHOW_PHOTO_PAGE, nextImagePath, inFullscreenMode), null));
         }
         addHtmlContent("</td></tr></table>");
     }
@@ -373,6 +415,36 @@ public class HtmlTemplateProcessor {
      */
     private String constructTargetURL(String action, String pathParameterValue) {
         return MessageFormat.format("{0}?{1}={2}", action, PARAMETER_PATH, pathParameterValue);
+    }
+
+    /**
+     * Construct an action URL string, of the format action?path=pathParameterValue, optionally
+     * with a second fullscreen=yes query parameter.
+     *
+     * @param action                 The base action URL
+     * @param pathParameterValue     The value to use for the path parameter.
+     * @param addFullScreenParameter Whether or not to add an extra fullscreen url query parameter.
+     * @return The constructed string.
+     */
+    private String constructTargetURLForFullScreen(String action, String pathParameterValue, boolean addFullScreenParameter) {
+        if (addFullScreenParameter) {
+            return constructTargetURL(action, pathParameterValue, PARAMETER_FULLSCREEN, "yes");
+        } else {
+            return constructTargetURL(action, pathParameterValue);
+        }
+    }
+
+    /**
+     * Construct an action URL string, of the format action?path=pathParameterValue&secondParam=secondParamValue
+     *
+     * @param action             The base action URL
+     * @param pathParameterValue The value to use for the path parameter.
+     * @param extraParamName     The name of an extra URL parameter.
+     * @param extraParamValue    The value of an extra URL parameter.
+     * @return The constructed string.
+     */
+    private String constructTargetURL(String action, String pathParameterValue, String extraParamName, String extraParamValue) {
+        return MessageFormat.format("{0}?{1}={2}&{3}={4}", action, PARAMETER_PATH, pathParameterValue, extraParamName, extraParamValue);
     }
 
     /**

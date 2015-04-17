@@ -209,6 +209,12 @@ public class InternalPhotoWebServer extends NanoHTTPD {
             case "collapse":
                 result = R.drawable.web_collapse;
                 break;
+            case "fullscreen":
+                result = R.drawable.web_fullscreen;
+                break;
+            case "exit_fullscreen":
+                result = R.drawable.web_exit_fullscreen;
+                break;
         }
         return result;
     }
@@ -328,8 +334,8 @@ public class InternalPhotoWebServer extends NanoHTTPD {
             if (!file.exists()) {
                 response = get404Response(path, httpRequest);
             } else {
-                MediaRequestState currentDisplayState = extractCurrentDisplayState(httpRequest);
-                return displayPhotoPageAsHtml(currentDisplayState);
+                MediaRequestState requestState = extractCurrentRequestState(httpRequest);
+                return displayPhotoPageAsHtml(requestState);
             }
         }
         return response;
@@ -353,26 +359,63 @@ public class InternalPhotoWebServer extends NanoHTTPD {
      * <li>If applicable, a photo.</li>
      * </ul>
      *
-     * @param currentDisplayState Information about the directory, page within that directory, and media-file to show.
+     * @param requestState Information about the directory, page within that directory, and media-file to show.
      * @return The response html page.
      */
-    private Response displayPhotoPageAsHtml(MediaRequestState currentDisplayState) {
+    private Response displayPhotoPageAsHtml(MediaRequestState requestState) {
         HtmlTemplateProcessor htmlOutput = new HtmlTemplateProcessor(context);
 
         CacheDirectoryEntry currentPathCachedDirectory;
-        if (currentDisplayState == null) {
+        boolean fullScreenMode = false;
+        if (requestState == null) {
             currentPathCachedDirectory = null;
         } else {
-            currentPathCachedDirectory = getOrRetrieveCachedDirectory(currentDisplayState.getCurrentDirectoryPath());
+            currentPathCachedDirectory = getOrRetrieveCachedDirectory(requestState.getCurrentDirectoryPath());
+            fullScreenMode = requestState.isInFullscreenMode();
+        }
+        htmlOutput.setUseFullscreenTemplate(fullScreenMode);
+
+        if (!fullScreenMode) {
+            displayDirectorySelector(htmlOutput, requestState, currentPathCachedDirectory);
+
+            // If a directory is selected, show its contents as thumbnails.
+            if (currentPathCachedDirectory != null) {
+                String selectedThumbnailImagePath = htmlOutput.addDirectoryContentsAsThumbnails(currentPathCachedDirectory, requestState);
+                if (selectedThumbnailImagePath != null && requestState.getCurrentImagePath() == null) {
+                    // For better user experience, default to the first thumbnail shown in case no image specifically selected.
+                    requestState.setCurrentImagePath(selectedThumbnailImagePath);
+                }
+
+                htmlOutput.addSeparator();
+            }
         }
 
+        if (requestState != null && requestState.getCurrentImagePath() != null) {
+            String[] siblingImagePaths = getSiblingImages(currentPathCachedDirectory, requestState.getCurrentImagePath());
+            htmlOutput.addMainImageHtml(requestState.getCurrentImagePath(), siblingImagePaths[0], siblingImagePaths[1], fullScreenMode);
+            if (!fullScreenMode) {
+                htmlOutput.addSeparator();
+            }
+        }
+
+        return new NanoHTTPD.Response(htmlOutput.getHtmlOutput());
+    }
+
+    /**
+     * Render a current directory selector including possibly the directory tree.
+     *
+     * @param htmlOutput                 The template processor to render output to.
+     * @param requestState               The current http request being processed.
+     * @param currentPathCachedDirectory The currently selected directory.
+     */
+    private void displayDirectorySelector(HtmlTemplateProcessor htmlOutput, MediaRequestState requestState, CacheDirectoryEntry currentPathCachedDirectory) {
         if (currentPathCachedDirectory != null) {
             htmlOutput.addHtmlContent("<div class='directory-box-selection'>");
-            htmlOutput.addDirectoryContentToggle(currentDisplayState);
+            htmlOutput.addDirectoryContentToggle(requestState);
             htmlOutput.addHtmlContent("<b>" + currentPathCachedDirectory.getName() + "</b>");
             htmlOutput.addHtmlContent("</div>");
         }
-        if (currentPathCachedDirectory == null || currentDisplayState.isForceShowDirectoryStructure()) {
+        if (currentPathCachedDirectory == null || requestState.isForceShowDirectoryStructure()) {
             htmlOutput.addHtmlContent("<div class='directory-box-chooser'>");
             htmlOutput.addHtmlContent("<ul>");
             for (CacheDirectoryEntry topLevelDirectory : topLevelDirectories) {
@@ -381,25 +424,6 @@ public class InternalPhotoWebServer extends NanoHTTPD {
             htmlOutput.addHtmlContent("</ul>");
             htmlOutput.addHtmlContent("</div>");
         }
-
-        // If a directory is selected, show its contents as thumbnails.
-        if (currentPathCachedDirectory != null) {
-            String selectedThumbnailImagePath = htmlOutput.addDirectoryContentsAsThumbnails(currentPathCachedDirectory, currentDisplayState);
-            if (selectedThumbnailImagePath != null && currentDisplayState.getCurrentImagePath() == null) {
-                // For better user experience, default to the first thumbnail shown in case no image specifically selected.
-                currentDisplayState.setCurrentImagePath(selectedThumbnailImagePath);
-            }
-
-            htmlOutput.addSeparator();
-        }
-
-        if (currentDisplayState != null && currentDisplayState.getCurrentImagePath() != null) {
-            String[] siblingImagePaths = getSiblingImages(currentPathCachedDirectory, currentDisplayState.getCurrentImagePath());
-            htmlOutput.addMainImageHtml(currentDisplayState.getCurrentImagePath(), siblingImagePaths[0], siblingImagePaths[1]);
-            htmlOutput.addSeparator();
-        }
-
-        return new NanoHTTPD.Response(htmlOutput.getHtmlOutput());
     }
 
     /**
@@ -601,7 +625,7 @@ public class InternalPhotoWebServer extends NanoHTTPD {
      * @return An object representing the image directory, and if present the image path
      * and current image page.
      */
-    private MediaRequestState extractCurrentDisplayState(IHTTPSession httpRequest) {
+    private MediaRequestState extractCurrentRequestState(IHTTPSession httpRequest) {
         MediaRequestState result = new MediaRequestState();
         // See if a page number is explicitly set on request, may be overridden later in case
         // a picture is specified.
@@ -622,6 +646,8 @@ public class InternalPhotoWebServer extends NanoHTTPD {
         }
         String forceShowDirectoryStructure = httpRequest.getParms().get(HtmlTemplateProcessor.PARAMETER_FORCE_SHOW_DIRECTORY);
         result.setForceShowDirectoryStructure(forceShowDirectoryStructure != null);
+        String fullScreen = httpRequest.getParms().get(HtmlTemplateProcessor.PARAMETER_FULLSCREEN);
+        result.setInFullscreenMode(fullScreen != null);
 
         return result;
     }
