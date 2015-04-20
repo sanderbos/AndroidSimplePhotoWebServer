@@ -130,11 +130,7 @@ public class InternalPhotoWebServer extends NanoHTTPD {
         if (imagePath == null) {
             response = get500Response(httpRequest);
         } else {
-            CacheFileEntry cachedFileEntry = this.cacheRegistry.getCachedFile(imagePath);
-            if (cachedFileEntry == null) {
-                // Then we have to create and register it here and now.
-                cachedFileEntry = new CacheFileEntry(new File(imagePath), cacheRegistry);
-            }
+            CacheFileEntry cachedFileEntry = getOrCreateCacheFileEntry(imagePath);
             try {
                 ResponseDataItem responseDataItem;
                 if (showThumbnail) {
@@ -160,6 +156,21 @@ public class InternalPhotoWebServer extends NanoHTTPD {
             }
         }
         return response;
+    }
+
+    /**
+     * Get the CacheFileEntry for a path, or if it does not exist yet create one now.
+     *
+     * @param imagePath The path to the image to get the cache file entry for.
+     * @return An existing or new CacheFileEntry for the given image path.
+     */
+    private CacheFileEntry getOrCreateCacheFileEntry(String imagePath) {
+        CacheFileEntry cachedFileEntry = this.cacheRegistry.getCachedFile(imagePath);
+        if (cachedFileEntry == null) {
+            // Then we have to create and register it here and now.
+            cachedFileEntry = new CacheFileEntry(new File(imagePath), cacheRegistry);
+        }
+        return cachedFileEntry;
     }
 
     /**
@@ -376,7 +387,7 @@ public class InternalPhotoWebServer extends NanoHTTPD {
         htmlOutput.setUseFullscreenTemplate(fullScreenMode);
 
         if (!fullScreenMode) {
-            displayDirectorySelector(htmlOutput, requestState, currentPathCachedDirectory);
+            htmlOutput.displayDirectorySelector(requestState, currentPathCachedDirectory, topLevelDirectories);
 
             // If a directory is selected, show its contents as thumbnails.
             if (currentPathCachedDirectory != null) {
@@ -392,7 +403,13 @@ public class InternalPhotoWebServer extends NanoHTTPD {
 
         if (requestState != null && requestState.getCurrentImagePath() != null) {
             String[] siblingImagePaths = getSiblingImages(currentPathCachedDirectory, requestState.getCurrentImagePath());
-            htmlOutput.addMainImageHtml(requestState.getCurrentImagePath(), siblingImagePaths[0], siblingImagePaths[1], fullScreenMode);
+            CacheFileEntry cacheFileEntry = getOrCreateCacheFileEntry(requestState.getCurrentImagePath());
+            boolean isImageOrientationPortrait = false;
+            if (fullScreenMode) {
+                // Only determine this properly if needed.
+                isImageOrientationPortrait = treatAsImageOrientationPortrait(cacheFileEntry);
+            }
+            htmlOutput.addMainImageHtml(requestState.getCurrentImagePath(), siblingImagePaths[0], siblingImagePaths[1], fullScreenMode, isImageOrientationPortrait);
             if (!fullScreenMode) {
                 htmlOutput.addSeparator();
             }
@@ -402,28 +419,40 @@ public class InternalPhotoWebServer extends NanoHTTPD {
     }
 
     /**
-     * Render a current directory selector including possibly the directory tree.
+     * Determine, based on the width and height of an image, whether the image is in portrait mode
+     * (more high than wide).
+     * This method is called 'treat as' because this method is a bit fuzzy and it will also treat some images that are technically landscape
+     * as portrait, because it works better in the GUI.
      *
-     * @param htmlOutput                 The template processor to render output to.
-     * @param requestState               The current http request being processed.
-     * @param currentPathCachedDirectory The currently selected directory.
+     * @param cacheFileEntry The cache file entry to determine the orientation for. If set on the cache entry,
+     *                       its width and height are used. Otherwise, the width and height determined are cached.
+     * @return True in case the image dimensions are known, and the image orientation is portrait, false
+     * in all other cases.
      */
-    private void displayDirectorySelector(HtmlTemplateProcessor htmlOutput, MediaRequestState requestState, CacheDirectoryEntry currentPathCachedDirectory) {
-        if (currentPathCachedDirectory != null) {
-            htmlOutput.addHtmlContent("<div class='directory-box-selection'>");
-            htmlOutput.addDirectoryContentToggle(requestState);
-            htmlOutput.addHtmlContent("<b>" + currentPathCachedDirectory.getName() + "</b>");
-            htmlOutput.addHtmlContent("</div>");
-        }
-        if (currentPathCachedDirectory == null || requestState.isForceShowDirectoryStructure()) {
-            htmlOutput.addHtmlContent("<div class='directory-box-chooser'>");
-            htmlOutput.addHtmlContent("<ul>");
-            for (CacheDirectoryEntry topLevelDirectory : topLevelDirectories) {
-                htmlOutput.createDirectoryTree(topLevelDirectory, currentPathCachedDirectory);
+    private boolean treatAsImageOrientationPortrait(CacheFileEntry cacheFileEntry) {
+        boolean result = false;
+
+        if (cacheFileEntry.getHeight() == null) {
+            // Info not cached yet, determine and cache it now.
+            try {
+                int[] dimensions = ThumbnailUtil.getDimensions(cacheFileEntry.getFullPath());
+                cacheFileEntry.setWidthAndHeight(dimensions[0], dimensions[1]);
+            } catch (Exception exception) {
+                // Log problem but simply do not set dimensions.
+                MyLog.error("Could not get dimensions for image", exception);
             }
-            htmlOutput.addHtmlContent("</ul>");
-            htmlOutput.addHtmlContent("</div>");
         }
+
+        if (cacheFileEntry.getHeight() != null && cacheFileEntry.getHeight() > 0) {
+            float width = cacheFileEntry.getWidth();
+            float height = cacheFileEntry.getHeight();
+            // Somewhat voodoo, the real factor used here should be 1.0f but see some landscape
+            // images as portrait regardless.
+            result = (width / height) < 1.26f;
+            MyLog.debug("Image {0} has width={1} and height={2}", cacheFileEntry.getFullPath(), width, height);
+        }
+
+        return result;
     }
 
     /**

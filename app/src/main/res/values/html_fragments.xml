@@ -17,6 +17,7 @@
             .image-thumbnail-selected {border: 2px solid grey; background: grey; }\n
             .image-main-regular {height: 50vh; }\n
             .image-main-fullscreen {width: 85vw; }\n
+            .image-main-fullscreen-heightlimited {height: 90vh; }\n
             .thumbnail-cell-regular {margin: 0px; padding: 0px; vertical-align: top; }\n
             .image-download-icon {display: block; float: right; }\n
             .image-fullscreen-icon {display: block; float: right; padding-left: 4px; }\n

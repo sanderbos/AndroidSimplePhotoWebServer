@@ -28,8 +28,19 @@ public class CacheFileEntry {
     private boolean checkedForMediaStoreThumbnail = false;
 
     /**
+     * The width (if determined) of the cached image.
+     */
+    private Integer width = null;
+
+    /**
+     * The height (if determined) of the cached image.
+     */
+    private Integer height = null;
+
+    /**
      * Constructor.
-     * @param file The file being cached.
+     *
+     * @param file  The file being cached.
      * @param cache A shared registry of all cached directories and files.
      */
     public CacheFileEntry(File file, CacheRegistry cache) {
@@ -40,6 +51,7 @@ public class CacheFileEntry {
 
     /**
      * Get the full path of the file.
+     *
      * @return The full path of the file.
      */
     public String getFullPath() {
@@ -48,6 +60,7 @@ public class CacheFileEntry {
 
     /**
      * Get the last modification date of the cached file.
+     *
      * @return The last modification date of the file.
      */
     public long getLastModificationTimestamp() {
@@ -56,6 +69,7 @@ public class CacheFileEntry {
 
     /**
      * Get the path to the thumbnail, if available.
+     *
      * @return The full path to the thumbnail of this media file, or null in case no such thumbnail
      * is available.
      */
@@ -66,6 +80,7 @@ public class CacheFileEntry {
     /**
      * Set the thumbnail path (should be a reference to an existing thumbnail for the image this
      * cache file entry represents).
+     *
      * @param thumbnailPath The path of the thumbnail.
      */
     public void setThumbnailPath(String thumbnailPath) {
@@ -74,6 +89,7 @@ public class CacheFileEntry {
 
     /**
      * Determine whether the media store has ever been checked for a thumbnail for this image.
+     *
      * @return True in case the checkedForMediaStoreThumbnail has been set, false otherwise.
      */
     public boolean isCheckedForMediaStoreThumbnail() {
@@ -83,10 +99,41 @@ public class CacheFileEntry {
     /**
      * Call this method (with true argument) in case it should be registered the media store
      * has been checked for a thumbnail.
+     *
      * @param checkedForMediaThumbnail The new value for whether the thumbnail media has been
      *                                 determined.
      */
     public void setCheckedForMediaStoreThumbnail(boolean checkedForMediaThumbnail) {
         this.checkedForMediaStoreThumbnail = checkedForMediaThumbnail;
     }
+
+    /**
+     * Set the width and height of the represented image.
+     *
+     * @param width  The value for width.
+     * @param height The value for height.
+     */
+    public void setWidthAndHeight(Integer width, Integer height) {
+        this.width = width;
+        this.height = height;
+    }
+
+    /**
+     * Get the width of the image, if known.
+     *
+     * @return The width of the image, or null in case that information is not known.
+     */
+    public Integer getWidth() {
+        return width;
+    }
+
+    /**
+     * Get the height of the image, if known.
+     *
+     * @return The height of the image, or null in case that information is not known.
+     */
+    public Integer getHeight() {
+        return height;
+    }
+
 }

@@ -179,6 +179,7 @@ public class HtmlTemplateProcessor {
 
     /**
      * Set this field to use the special full screen template.
+     *
      * @param useFullscreenTemplate The new value for using the full screen template.
      */
     public void setUseFullscreenTemplate(boolean useFullscreenTemplate) {
@@ -336,12 +337,14 @@ public class HtmlTemplateProcessor {
     /**
      * Add the image HTML for an image, along with its buttons.
      *
-     * @param imagePath         The full path of an image to show.
-     * @param previousImagePath The full path of a previous image in the list, if such an image exists.
-     * @param nextImagePath     The full path of a next image in the list, if such an image exists.
-     * @param inFullscreenMode  Whether we are currently using full screen mode.
+     * @param imagePath                  The full path of an image to show.
+     * @param previousImagePath          The full path of a previous image in the list, if such an image exists.
+     * @param nextImagePath              The full path of a next image in the list, if such an image exists.
+     * @param inFullscreenMode           Whether we are currently using full screen mode.
+     * @param isImageOrientationPortrait Is it known that this image is made in 'vertical mode', as in that it is more high than wide.
+     *                                   (for performance, only used when inFullscreenMode is true)
      */
-    public void addMainImageHtml(String imagePath, String previousImagePath, String nextImagePath, boolean inFullscreenMode) {
+    public void addMainImageHtml(String imagePath, String previousImagePath, String nextImagePath, boolean inFullscreenMode, boolean isImageOrientationPortrait) {
         addHtmlContent("<table class='position-block-center'><tr><td>");
         if (previousImagePath != null) {
             String previousImageTag = createImage(constructTargetURL(ACTION_URL_SHOW_ICON, "previous"), "", getResourceText(R.string.html_text_previous_image));
@@ -352,7 +355,11 @@ public class HtmlTemplateProcessor {
 
         String imageCssClass = "image-main-regular";
         if (inFullscreenMode) {
-            imageCssClass = "image-main-fullscreen";
+            if (isImageOrientationPortrait) {
+                imageCssClass = "image-main-fullscreen-heightlimited";
+            } else {
+                imageCssClass = "image-main-fullscreen";
+            }
         }
         String imageTag = createImage(constructTargetURL(ACTION_URL_SHOW_PHOTO, imagePath), imageCssClass, null);
         addHtmlContent(imageTag);
@@ -537,6 +544,32 @@ public class HtmlTemplateProcessor {
      */
     private String getResourceText(int resourceId) {
         return context.getResources().getText(resourceId).toString();
+    }
+
+    /**
+     * Render a current directory selector including possibly the directory tree.
+     *
+     * @param requestState               The current http request being processed.
+     * @param currentPathCachedDirectory The currently selected directory.
+     * @param topLevelDirectories        A full list of top level directories.
+     */
+    public void displayDirectorySelector(MediaRequestState requestState, CacheDirectoryEntry currentPathCachedDirectory,
+                                         List<CacheDirectoryEntry> topLevelDirectories) {
+        if (currentPathCachedDirectory != null) {
+            addHtmlContent("<div class='directory-box-selection'>");
+            addDirectoryContentToggle(requestState);
+            addHtmlContent("<b>" + currentPathCachedDirectory.getName() + "</b>");
+            addHtmlContent("</div>");
+        }
+        if (currentPathCachedDirectory == null || requestState.isForceShowDirectoryStructure()) {
+            addHtmlContent("<div class='directory-box-chooser'>");
+            addHtmlContent("<ul>");
+            for (CacheDirectoryEntry topLevelDirectory : topLevelDirectories) {
+                createDirectoryTree(topLevelDirectory, currentPathCachedDirectory);
+            }
+            addHtmlContent("</ul>");
+            addHtmlContent("</div>");
+        }
     }
 
     /**

@@ -69,4 +69,22 @@ public class ThumbnailUtil {
 
         return thumbnailData;
     }
+
+    /**
+     * Get the width and height of an image.
+     * @param pathToImage The image whose dimensions to get.
+     * @return An integer array with the width (index 0 in result) and height (index 1 in result) of an
+     * image.
+     * @throws IOException In case the image cannot be opened.
+     */
+    public static int[] getDimensions(String pathToImage) throws IOException {
+
+        BitmapFactory.Options bitmapOptions = new BitmapFactory.Options();
+        bitmapOptions.inJustDecodeBounds = true;
+        BitmapFactory.decodeFile(pathToImage, bitmapOptions);
+        int[] result = new int[2];
+        result[0] = bitmapOptions.outWidth;
+        result[1] = bitmapOptions.outHeight;
+        return result;
+    }
 }
