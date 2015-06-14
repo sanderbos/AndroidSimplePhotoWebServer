@@ -2,7 +2,6 @@ package com.sanderbos.simplephotowebserver;
 
 import android.app.Activity;
 import android.content.Context;
-import android.media.Image;
 import android.provider.MediaStore;
 
 import com.sanderbos.simplephotowebserver.cache.CacheDirectoryEntry;
@@ -120,14 +119,15 @@ public class InternalPhotoWebServer extends NanoHTTPD {
     /**
      * Serve the thumbnail image to the web client.
      *
-     * @param imagePath           The path to the image (which is not the path to the thumbnail, but to
-     *                            the actual image).
-     * @param httpRequest         The context HTTP-request.
-     * @param showThumbnail       Whether or not to show the regular image (false) or its thumbnail (true).
-     * @param useDownloadMimeType If set to true, the mime type used is such that it will trigger a download in the browser.
+     * @param imagePath        The path to the image (which is not the path to the thumbnail, but to
+     *                         the actual image).
+     * @param httpRequest      The context HTTP-request.
+     * @param showThumbnail    Whether or not to show the regular image (false) or its thumbnail (true).
+     * @param isDownloadAction If set to true, the mime type used is such that it will trigger a download in the browser, and no transformations are
+     *                         done on the image..
      * @return The http response (either the image, or an error page that is never seen).
      */
-    private Response displayImage(String imagePath, IHTTPSession httpRequest, boolean showThumbnail, boolean useDownloadMimeType) {
+    private Response displayImage(String imagePath, IHTTPSession httpRequest, boolean showThumbnail, boolean isDownloadAction) {
         Response response;
         if (imagePath == null) {
             response = get500Response(httpRequest);
@@ -135,18 +135,19 @@ public class InternalPhotoWebServer extends NanoHTTPD {
             CacheFileEntry cachedFileEntry = getOrCreateCacheFileEntry(imagePath);
             try {
                 ResponseDataItem responseDataItem;
+                String rotationParameter = httpRequest.getParms().get(HtmlTemplateProcessor.PARAMETER_APPLY_ROTATION);
+                ImageOrientation rotation = convertRotationParamterStringToImageOrientation(rotationParameter);
+                boolean mustPerformRotation = rotation != ImageOrientation.ROTATE_NONE;
                 if (showThumbnail) {
-                    responseDataItem = getResponseDataForThumbnail(cachedFileEntry);
+                    responseDataItem = getResponseDataItemForThumbnail(cachedFileEntry);
+                } else if (mustPerformRotation) {
+                    responseDataItem = getResponseDataItemForImageWithRotation(cachedFileEntry, rotation);
                 } else {
-                    MyLog.debug("Getting image {0}", cachedFileEntry.getFullPath());
-                    String pathToServe = cachedFileEntry.getFullPath();
-                    String mimeType = getMimeType(pathToServe);
-                    InputStream streamToServe = new FileInputStream(pathToServe);
-                    responseDataItem = new ResponseDataItem(streamToServe, mimeType);
+                    responseDataItem = getResponseDataItemForImage(cachedFileEntry);
                 }
                 // NanoHTTPD will close the stream.
                 String mimeType = responseDataItem.getMimeType();
-                if (useDownloadMimeType) {
+                if (isDownloadAction) {
                     mimeType = "application/octet-stream";
                 }
                 response = new Response(Response.Status.OK, mimeType, responseDataItem.getStreamToServe());
@@ -158,6 +159,30 @@ public class InternalPhotoWebServer extends NanoHTTPD {
             }
         }
         return response;
+    }
+
+    /**
+     * Safely convert a http parameter value for a rotation parameter to an ImageOrientation.
+     *
+     * @param rotationParameter The parameter value, should be null or an angular amount of degrees.
+     * @return Always returns an image orientation, in case rotation parameter cannot be parsed
+     * ROTATION_NONE is returned.
+     */
+    private ImageOrientation convertRotationParamterStringToImageOrientation(String rotationParameter) {
+        ImageOrientation result = null;
+        if (rotationParameter != null) {
+            try {
+                int rotationInDegrees = Integer.valueOf(rotationParameter);
+                result = ImageOrientation.getImageOrientationByDegrees(rotationInDegrees);
+                // result may be null here
+            } catch (NumberFormatException numberFormatException) {
+                // Do nothing, fall back to default below
+            }
+        }
+        if (result == null) {
+            result = ImageOrientation.ROTATE_NONE;
+        }
+        return result;
     }
 
     /**
@@ -233,22 +258,39 @@ public class InternalPhotoWebServer extends NanoHTTPD {
     }
 
     /**
+     * Construct a response data for an image, without further processing.
+     *
+     * @param cachedFileEntry The cached file entry to get a response data item for.
+     * @return A response data item object representing the cached file entry.
+     * @throws FileNotFoundException In case the path in the cached file entry cannot be resolved to a file.
+     */
+    private ResponseDataItem getResponseDataItemForImage(CacheFileEntry cachedFileEntry) throws FileNotFoundException {
+        ResponseDataItem responseDataItem;
+        MyLog.debug("Getting image {0}", cachedFileEntry.getFullPath());
+        String pathToServe = cachedFileEntry.getFullPath();
+        String mimeType = getMimeType(pathToServe);
+        InputStream streamToServe = new FileInputStream(pathToServe);
+        responseDataItem = new ResponseDataItem(streamToServe, mimeType);
+        return responseDataItem;
+    }
+
+    /**
      * Get the thumbnail data for a cached file entry, using various levels of caching (that are
      * also updated while getting the data).
      *
      * @param cachedFileEntry The file entry to get the thumbnail data for.
-     * @return A response data item object representing the cached file entry.
+     * @return A response data item object representing the thumbnail of the cached file entry.
      * @throws IOException In case of an exception while accessing the data (we do not expect
      *                     errors from this method, it should already have been checked whether the cachedFileEntry
      *                     can have a proper thumbnail, which may be generated in this method).
      */
-    private ResponseDataItem getResponseDataForThumbnail(CacheFileEntry cachedFileEntry) throws IOException {
+    private ResponseDataItem getResponseDataItemForThumbnail(CacheFileEntry cachedFileEntry) throws IOException {
         ThumbnailDataCache thumbnailDataCache = this.cacheRegistry.getThumbnailDataCache();
 
         String imagePath = cachedFileEntry.getFullPath();
 
         String mimeType = MIME_TYPE_JPEG;
-        byte[] dataToServe = thumbnailDataCache.getFromCache(imagePath);
+        byte[] dataToServe = thumbnailDataCache.getThumbnailFromCache(imagePath);
         if (dataToServe == null) {
             // Not found in cache, retrieve it and then cache it.
             if (!cachedFileEntry.isCheckedForMediaStoreThumbnail()) {
@@ -270,10 +312,35 @@ public class InternalPhotoWebServer extends NanoHTTPD {
             // Currently the data cache simply assumes JPEG, so it does not need to track
             // the mime type.
             if (MIME_TYPE_JPEG.equals(mimeType)) {
-                thumbnailDataCache.addToCache(imagePath, dataToServe);
+                thumbnailDataCache.addThumbnailToCache(imagePath, dataToServe);
             }
         }
 
+        return new ResponseDataItem(new ByteArrayInputStream(dataToServe), mimeType);
+    }
+
+    /**
+     * Get the image data for a cached file entry, using various levels of caching (that are
+     * also updated while getting the data), where the image is to be rotated.
+     *
+     * @param cachedFileEntry The file entry to get the rotated image data for.
+     * @param rotation The rotation to perform on the image.
+     * @return A response data item object representing a rotated version of the cached file entry.
+     * @throws IOException In case of an exception while accessing the data (we do not expect
+     *                     errors from this method, it should already have been checked whether the cachedFileEntry
+     *                     should be rotated).
+     */
+    private ResponseDataItem getResponseDataItemForImageWithRotation(CacheFileEntry cachedFileEntry, ImageOrientation rotation) throws IOException {
+        ThumbnailDataCache thumbnailDataCache = this.cacheRegistry.getThumbnailDataCache();
+
+        String imagePath = cachedFileEntry.getFullPath();
+        String mimeType = getMimeType(imagePath);
+
+        byte[] dataToServe = thumbnailDataCache.getImageFromCache(imagePath, rotation);
+        if (dataToServe == null) {
+            dataToServe = ThumbnailUtil.createRotatedJPG(imagePath, rotation);
+            thumbnailDataCache.addImageToCache(imagePath, rotation, dataToServe);
+        }
         return new ResponseDataItem(new ByteArrayInputStream(dataToServe), mimeType);
     }
 
@@ -438,7 +505,7 @@ public class InternalPhotoWebServer extends NanoHTTPD {
             // Somewhat voodoo, the real factor used here should be 1.0f but see some landscape
             // images as portrait regardless.
             result = (width / height) < 1.26f;
-            MyLog.debug("Image {0} has width={1} and height={2}", cacheFileEntry.getFullPath(), width, height);
+            MyLog.debug("Image {0} has width={1,number,#} and height={2,number,#}", cacheFileEntry.getFullPath(), width, height);
         }
 
         ImageOrientation orientation = cacheFileEntry.getImageOrientation();
@@ -452,6 +519,7 @@ public class InternalPhotoWebServer extends NanoHTTPD {
     /**
      * Check whether the dimensions and orientation of an image have already been determined before,
      * and if not do so now.
+     *
      * @param cacheFileEntry The cache file entry that will be updated in case dimensions and
      *                       orientation are determined.
      */

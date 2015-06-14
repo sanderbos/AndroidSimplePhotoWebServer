@@ -1,18 +1,20 @@
 package com.sanderbos.simplephotowebserver.cache;
 
+import com.sanderbos.simplephotowebserver.util.ImageOrientation;
+
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Simple most recently used cache for thumbnail images of images, in byte array form.
+ * Simple most recently used cache for thumbnail and rotated images and rotated images in byte array form.
  */
 public class ThumbnailDataCache {
 
     /**
      * The default cache size (measured in bytes of actual thumbnail-data) kept.
-     * (0.5 MB)
+     * (2 MB)
      */
-    public static final int DEFAULT_CACHE_SIZE = 512 * 1024;
+    public static final int DEFAULT_CACHE_SIZE = 2 * 1024 * 1024;
 
     /**
      * The maximum size of byte-array data in this cache.
@@ -25,12 +27,14 @@ public class ThumbnailDataCache {
     private int currentCacheSize;
 
     /**
-     * Reference to the underlying LRU collection.
+     * Reference to the underlying LRU collection. Keys in this cache can be an image path
+     * (for thumbnails) or 'imagePath|rotationInDegrees' (for images).
      */
     private LRUCache cache;
 
     /**
      * Constructor.
+     *
      * @param sizeInBytes The maximum size of this cache in memory.
      */
     public ThumbnailDataCache(int sizeInBytes) {
@@ -41,11 +45,12 @@ public class ThumbnailDataCache {
 
     /**
      * Get an item from the cache (if available).
+     *
      * @param imagePath The path of the image (not the thumbnail) to get from the cache.
      * @return The thumbnail JPEG data of the thumbnail, or null in case that data is currently
      * not cached.
      */
-    public synchronized byte[] getFromCache(String imagePath) {
+    public synchronized byte[] getThumbnailFromCache(String imagePath) {
         byte[] result = null;
         if (this.cache.containsKey(imagePath)) {
             // This will update the LRU info
@@ -55,26 +60,62 @@ public class ThumbnailDataCache {
     }
 
     /**
-     * Add an item to the cache (the cache may be shrunk during this operation).
-     * @param imagePath The path of the image for which thumbnail data is being added.
-     * @param thumbnailData The extra thumbnail item.
+     * Get an item from the cache (if available).
+     *
+     * @param imagePath The path of the image to get from the cache.
+     * @param rotation  The rotation to get the image path for.
+     * @return The rotated JPEG data of the image, or null in case that data is currently
+     * not cached.
      */
-    public synchronized void addToCache(String imagePath, byte[] thumbnailData) {
-        int extraDataSize = thumbnailData.length;
+    public byte[] getImageFromCache(String imagePath, ImageOrientation rotation) {
+        return getThumbnailFromCache(createPathWithRotation(imagePath, rotation));
+    }
+
+    /**
+     * Add an item to the cache (the cache may be shrunk during this operation).
+     *
+     * @param imagePath The path of the image for which thumbnail data is being added.
+     * @param imageData The image data to cache.
+     */
+    public synchronized void addThumbnailToCache(String imagePath, byte[] imageData) {
+        int extraDataSize = imageData.length;
         if (!this.cache.containsKey(imagePath) && extraDataSize < maximumCacheSize) {
-            makeRoom(thumbnailData.length);
-            cache.put(imagePath, thumbnailData);
+            makeRoom(imageData.length);
+            cache.put(imagePath, imageData);
             this.currentCacheSize += extraDataSize;
         }
     }
 
     /**
+     * Add an item to the cache (the cache may be shrunk during this operation).
+     *
+     * @param imagePath The path of the image for which data is being added.
+     * @param rotation  The rotation of the data cached.
+     * @param imageData The image data to cache.
+     */
+    public void addImageToCache(String imagePath, ImageOrientation rotation, byte[] imageData) {
+        addThumbnailToCache(createPathWithRotation(imagePath, rotation), imageData);
+    }
+
+    /**
+     * Construct a string of the form 'path|rotation'
+     *
+     * @param path     The path to use in the constructed string.
+     * @param rotation The rotation to use in the constructed string.
+     * @return A string of the format 'path|rotationInDegrees'.
+     */
+    private String createPathWithRotation(String path, ImageOrientation rotation) {
+        return path + String.valueOf(rotation.getRotationInDegrees());
+    }
+
+    /**
      * Check whether the extra item will fit in the cache, and make it smaller otherwise.
+     *
      * @param extraDataSize The size of the extra item about to be added to the cache.
      */
     private void makeRoom(int extraDataSize) {
         if (extraDataSize >= maximumCacheSize) {
-            // Check is already done in addToCache
+            // Check is already done in addThumbnailToCache
             throw new RuntimeException("Internal error, we should not cache these");
         }
         while (currentCacheSize + extraDataSize > maximumCacheSize) {
@@ -104,6 +145,7 @@ public class ThumbnailDataCache {
 
         /**
          * Method to override to make it into an LRU cache.
+         *
          * @param eldest The item that is nominated to be removed if space is needed.
          * @return Whether or not action is needed.
          */

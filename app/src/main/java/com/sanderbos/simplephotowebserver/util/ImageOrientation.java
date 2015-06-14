@@ -10,7 +10,7 @@ public enum ImageOrientation {
     ROTATE_NONE(ExifInterface.ORIENTATION_NORMAL, 0),
     ROTATE_90(ExifInterface.ORIENTATION_ROTATE_90, 90),
     ROTATE_180(ExifInterface.ORIENTATION_ROTATE_180, 180),
-    ROTATE_270(ExifInterface.ORIENTATION_ROTATE_270, 270),;
+    ROTATE_270(ExifInterface.ORIENTATION_ROTATE_270, 270);
 
     /**
      * This ImageOrientation value in ExifInterface constant terms.
@@ -61,6 +61,23 @@ public enum ImageOrientation {
         ImageOrientation result = null;
         for (ImageOrientation value : values()) {
             if (value.getExifInterfaceConstantValue() == exifRotation) {
+                result = value;
+                break;
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Get the enum value based for a given rotation in degrees value.
+     *
+     * @param rotationInDegrees The rotation in degrees.
+     * @return The matching enum value, or null in case the rotationInDegrees parameter cannot be matched.
+     */
+    public static ImageOrientation getImageOrientationByDegrees(int rotationInDegrees) {
+        ImageOrientation result = null;
+        for (ImageOrientation value : values()) {
+            if (value.getRotationInDegrees() == rotationInDegrees) {
                 result = value;
                 break;
             }

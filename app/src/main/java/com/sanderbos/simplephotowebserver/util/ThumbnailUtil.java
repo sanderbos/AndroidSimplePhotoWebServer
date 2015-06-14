@@ -2,6 +2,7 @@ package com.sanderbos.simplephotowebserver.util;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
 import android.media.ExifInterface;
 
 import java.io.ByteArrayOutputStream;
@@ -9,16 +10,15 @@ import java.io.FileInputStream;
 import java.io.IOException;
 
 /**
- * Utility class with code related to accessing thumbnails in the meta-database
- * or creating thumbnails from scratch.
+ * Utility class with code related to accessing images in the meta-database
+ * or creating thumbnails and other JPEGs from scratch.
  */
 public class ThumbnailUtil {
 
     /**
-     * Quality to use for image
+     * Quality to use for converted images.
      */
     private static final int JPEG_COMPRESSION_QUALITY = 80;
-
 
     /**
      * Create a thumbnail image, based on a path.
@@ -31,34 +31,85 @@ public class ThumbnailUtil {
      * @return A byte array representing a JPG thumbnail.
      * @throws IOException In case the file cannot be opened, or closed.
      */
-    public static synchronized byte[] createJPGThumbnail(String pathToImage, int widthForThumbnail) throws IOException {
+    public static byte[] createJPGThumbnail(String pathToImage, int widthForThumbnail) throws IOException {
+        return performJPGConversion(pathToImage, widthForThumbnail, null);
+
+    }
+
+    /**
+     * Create a new JPEG image with a rotation applied.
+     *
+     * @param pathToImage The image to convert.
+     * @param rotation    The rotation to apply.
+     * @return A byte array representing a (rotated) JPEG image.
+     * @throws IOException In case the file cannot be opened, or closed.
+     */
+    public static byte[] createRotatedJPG(String pathToImage, ImageOrientation rotation) throws IOException {
+        return performJPGConversion(pathToImage, -1, rotation);
+    }
+
+    /**
+     * Create a converted image, based on a path, a new width, and an optional rotation.
+     * <br>
+     * (Performance characteristics indication on a Galaxy S3: 250ms for small images (&lt; 200KB), 700ms for larger images,
+     * for a width of 40 pixels the images are about 2KB).
+     *
+     * @param pathToImage    The full path to the image, expected to represent an existing image.
+     * @param thumbnailWidth The width to use for thumbnails (not used when a rotation is applied).
+     * @param rotation       An optional rotation, either a rotation or a thumbnailWidht should be specified.
+     * @return A byte array representing a converted JPEG image.
+     * @throws IOException In case the file cannot be opened, or closed.
+     */
+    private static synchronized byte[] performJPGConversion(String pathToImage, int thumbnailWidth, ImageOrientation rotation) throws IOException {
 
         // This method is synchronized for a reason. It takes a lot of memory to construct the bitmap object, so it should be taken care
-        // of that no two
+        // of that no two conversions are executed at the same time
 
-        byte[] thumbnailData = null;
+        byte[] convertedImageData = null;
 
         // http://stackoverflow.com/questions/2577221/android-how-to-create-runtime-thumbnail recommends using
         // Bitmap ThumbImage = ThumbnailUtils.extractThumbnail(BitmapFactory.decodeFile(imagePath), THUMBSIZE, THUMBSIZE);
         // but then I must know the height.
         FileInputStream imageInputStream = new FileInputStream(pathToImage);
         try {
-            // The scale is set to 8 for performance, must be power of 2 setting it to 16 (smaller) did not make performance better.
+            //
             BitmapFactory.Options bitmapOptions = new BitmapFactory.Options();
-            bitmapOptions.inSampleSize = 8;
+            if (rotation != null) {
+                // Thumbnails, the scale is set to 8 for performance, must be power of 2 setting it to 16 (smaller) did not make performance better.
+                bitmapOptions.inSampleSize = 8;
+            } else {
+                // Rotation, to lower quality reduce size somewhat on reading (not possible during rotation).
+                // Sort of magic number, but for input file of 1.6MB leads to output file of
+                bitmapOptions.inSampleSize = 2;
+            }
 
             Bitmap imageBitmap = BitmapFactory.decodeStream(imageInputStream, null, bitmapOptions);
             try {
-                int scaledHeight = (int) (widthForThumbnail / ((double) imageBitmap.getWidth() / (double) imageBitmap.getHeight()));
 
-                Bitmap thumbnailImageBitmap = Bitmap.createScaledBitmap(imageBitmap, widthForThumbnail, scaledHeight, false);
+                Bitmap convertedImageBitmap;
+                if (rotation == null) {
+                    // Thumbnail, scale down the image
+                    int scaledHeight = (int) (thumbnailWidth / ((double) imageBitmap.getWidth() / (double) imageBitmap.getHeight()));
+                    convertedImageBitmap = Bitmap.createScaledBitmap(imageBitmap, thumbnailWidth, scaledHeight, false);
+                } else {
+                    // Rotate the image
+                    Matrix conversionMatrix = new Matrix();
+                    conversionMatrix.postRotate(rotation.getRotationInDegrees());
+                    final boolean filter = true;
+                    // Note: It is not possible to scale down the image in this action, scaling down is done with the bitmapOptions above
+                    convertedImageBitmap = Bitmap.createBitmap(imageBitmap, 0, 0, imageBitmap.getWidth(), imageBitmap.getHeight(), conversionMatrix, filter);
+                }
 
                 try {
-                    ByteArrayOutputStream thumbnailOutputStream = new ByteArrayOutputStream();
-                    thumbnailImageBitmap.compress(Bitmap.CompressFormat.JPEG, JPEG_COMPRESSION_QUALITY, thumbnailOutputStream);
-                    thumbnailData = thumbnailOutputStream.toByteArray();
+                    ByteArrayOutputStream jpegImageOutputStream = new ByteArrayOutputStream();
+                    convertedImageBitmap.compress(Bitmap.CompressFormat.JPEG, JPEG_COMPRESSION_QUALITY, jpegImageOutputStream);
+                    convertedImageData = jpegImageOutputStream.toByteArray();
                 } finally {
-                    thumbnailImageBitmap.recycle();
+                    convertedImageBitmap.recycle();
+                }
+
+                if (rotation != null && convertedImageData != null) {
+                    MyLog.debug("Image converted to size {0,number,#} by {1,number,#} leading to size of {2,number,#} KB ", convertedImageBitmap.getWidth(), convertedImageBitmap.getHeight(), convertedImageData.length / 1024);
                 }
             } finally {
                 imageBitmap.recycle();
@@ -68,7 +119,7 @@ public class ThumbnailUtil {
             imageInputStream.close();
         }
 
-        return thumbnailData;
+        return convertedImageData;
     }
 
     /**
@@ -127,4 +178,5 @@ public class ThumbnailUtil {
 
         return exifOrientation;
     }
+
 }

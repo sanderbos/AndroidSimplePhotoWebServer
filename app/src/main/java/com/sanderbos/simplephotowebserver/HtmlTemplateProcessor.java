@@ -41,7 +41,7 @@ public class HtmlTemplateProcessor {
     /**
      * Parameter used in image source URLs to indicate a rotation should be applied.
      */
-    public static final String PARAMETER_APPLY_RATION = "rotation";
+    public static final String PARAMETER_APPLY_ROTATION = "rotation";
 
     /**
      * Url directory page parameter name.
@@ -444,7 +444,7 @@ public class HtmlTemplateProcessor {
     private String constructImageSrcURL(String pathParameterValue, ImageOrientation rotationParameter) {
         boolean addRotationParamter = rotationParameter != null && rotationParameter != ImageOrientation.ROTATE_NONE;
         if (addRotationParamter) {
-            return constructTargetURL(ACTION_URL_SHOW_PHOTO, pathParameterValue, PARAMETER_APPLY_RATION, String.valueOf(rotationParameter.getRotationInDegrees()));
+            return constructTargetURL(ACTION_URL_SHOW_PHOTO, pathParameterValue, PARAMETER_APPLY_ROTATION, String.valueOf(rotationParameter.getRotationInDegrees()));
         } else {
             return constructTargetURL(ACTION_URL_SHOW_PHOTO, pathParameterValue);
         }
