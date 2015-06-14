@@ -23,7 +23,7 @@ public class CacheRegistry {
     /**
      * The thumbnail data cache, stored here to keep all caches together.
      */
-    private ThumbnailDataCache thumbnailDataCache = new ThumbnailDataCache(ThumbnailDataCache.DEFAULT_CACHE_SIZE);
+    private ImageDataCache thumbnailDataCache = new ImageDataCache(ImageDataCache.DEFAULT_CACHE_SIZE);
 
     /**
      * Public constructor.
@@ -74,7 +74,7 @@ public class CacheRegistry {
      * Get access to the thumbnail data cache (that is only stored but not truly linked to the cache registry).
      * @return The thumbnail data cache.
      */
-    public ThumbnailDataCache getThumbnailDataCache() {
+    public ImageDataCache getThumbnailDataCache() {
         return this.thumbnailDataCache;
     }
 }

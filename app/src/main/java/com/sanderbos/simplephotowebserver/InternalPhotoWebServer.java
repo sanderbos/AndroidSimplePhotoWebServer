@@ -7,12 +7,12 @@ import android.provider.MediaStore;
 import com.sanderbos.simplephotowebserver.cache.CacheDirectoryEntry;
 import com.sanderbos.simplephotowebserver.cache.CacheFileEntry;
 import com.sanderbos.simplephotowebserver.cache.CacheRegistry;
-import com.sanderbos.simplephotowebserver.cache.ThumbnailDataCache;
+import com.sanderbos.simplephotowebserver.cache.ImageDataCache;
 import com.sanderbos.simplephotowebserver.util.ImageOrientation;
 import com.sanderbos.simplephotowebserver.util.MediaDirectoryFilter;
 import com.sanderbos.simplephotowebserver.util.MediaStoreUtil;
 import com.sanderbos.simplephotowebserver.util.MyLog;
-import com.sanderbos.simplephotowebserver.util.ThumbnailUtil;
+import com.sanderbos.simplephotowebserver.util.MyImageUtil;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -285,7 +285,7 @@ public class InternalPhotoWebServer extends NanoHTTPD {
      *                     can have a proper thumbnail, which may be generated in this method).
      */
     private ResponseDataItem getResponseDataItemForThumbnail(CacheFileEntry cachedFileEntry) throws IOException {
-        ThumbnailDataCache thumbnailDataCache = this.cacheRegistry.getThumbnailDataCache();
+        ImageDataCache thumbnailDataCache = this.cacheRegistry.getThumbnailDataCache();
 
         String imagePath = cachedFileEntry.getFullPath();
 
@@ -306,7 +306,7 @@ public class InternalPhotoWebServer extends NanoHTTPD {
             } else {
                 MyLog.debug("Constructing new thumbnail for image {0}", cachedFileEntry.getFullPath());
                 mimeType = MIME_TYPE_JPEG;
-                dataToServe = ThumbnailUtil.createJPGThumbnail(cachedFileEntry.getFullPath(), HtmlTemplateProcessor.THUMBNAIL_WIDTH);
+                dataToServe = MyImageUtil.createJPGThumbnail(cachedFileEntry.getFullPath(), HtmlTemplateProcessor.THUMBNAIL_WIDTH);
             }
 
             // Currently the data cache simply assumes JPEG, so it does not need to track
@@ -331,14 +331,14 @@ public class InternalPhotoWebServer extends NanoHTTPD {
      *                     should be rotated).
      */
     private ResponseDataItem getResponseDataItemForImageWithRotation(CacheFileEntry cachedFileEntry, ImageOrientation rotation) throws IOException {
-        ThumbnailDataCache thumbnailDataCache = this.cacheRegistry.getThumbnailDataCache();
+        ImageDataCache thumbnailDataCache = this.cacheRegistry.getThumbnailDataCache();
 
         String imagePath = cachedFileEntry.getFullPath();
         String mimeType = getMimeType(imagePath);
 
         byte[] dataToServe = thumbnailDataCache.getImageFromCache(imagePath, rotation);
         if (dataToServe == null) {
-            dataToServe = ThumbnailUtil.createRotatedJPG(imagePath, rotation);
+            dataToServe = MyImageUtil.createRotatedJPG(imagePath, rotation);
             thumbnailDataCache.addImageToCache(imagePath, rotation, dataToServe);
         }
         return new ResponseDataItem(new ByteArrayInputStream(dataToServe), mimeType);
@@ -528,12 +528,12 @@ public class InternalPhotoWebServer extends NanoHTTPD {
         if (cacheFileEntry.getHeight() == null) {
             // Info not cached yet, determine and cache it now.
             try {
-                int[] dimensions = ThumbnailUtil.getDimensions(cacheFileEntry.getFullPath());
+                int[] dimensions = MyImageUtil.getDimensions(cacheFileEntry.getFullPath());
                 cacheFileEntry.setWidthAndHeight(dimensions[0], dimensions[1]);
                 String imagePath = cacheFileEntry.getFullPath();
                 if (MIME_TYPE_JPEG.equals(getMimeType(imagePath))) {
                     // Perform extra step, determine a possible image rotation that needs to be applied.
-                    cacheFileEntry.setImageOrientation(ThumbnailUtil.getOrientationForImage(imagePath));
+                    cacheFileEntry.setImageOrientation(MyImageUtil.getOrientationForImage(imagePath));
                 }
             } catch (Exception exception) {
                 // Log problem but simply do not set dimensions.

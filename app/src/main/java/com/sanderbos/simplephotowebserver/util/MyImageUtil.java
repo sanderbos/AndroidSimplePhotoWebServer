@@ -13,7 +13,7 @@ import java.io.IOException;
  * Utility class with code related to accessing images in the meta-database
  * or creating thumbnails and other JPEGs from scratch.
  */
-public class ThumbnailUtil {
+public class MyImageUtil {
 
     /**
      * Quality to use for converted images.

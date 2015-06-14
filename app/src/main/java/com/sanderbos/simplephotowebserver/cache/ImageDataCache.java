@@ -8,7 +8,7 @@ import java.util.Map;
 /**
  * Simple most recently used cache for thumbnail and rotated images and rotated images in byte array form.
  */
-public class ThumbnailDataCache {
+public class ImageDataCache {
 
     /**
      * The default cache size (measured in bytes of actual thumbnail-data) kept.
@@ -37,7 +37,7 @@ public class ThumbnailDataCache {
      *
      * @param sizeInBytes The maximum size of this cache in memory.
      */
-    public ThumbnailDataCache(int sizeInBytes) {
+    public ImageDataCache(int sizeInBytes) {
         this.maximumCacheSize = sizeInBytes;
         this.currentCacheSize = 0;
         this.cache = new LRUCache();
