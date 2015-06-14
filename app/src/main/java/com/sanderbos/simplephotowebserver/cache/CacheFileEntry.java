@@ -1,5 +1,7 @@
 package com.sanderbos.simplephotowebserver.cache;
 
+import com.sanderbos.simplephotowebserver.util.ImageOrientation;
+
 import java.io.File;
 
 /**
@@ -36,6 +38,8 @@ public class CacheFileEntry {
      * The height (if determined) of the cached image.
      */
     private Integer height = null;
+
+    private ImageOrientation imageOrientation = ImageOrientation.ROTATE_NONE;
 
     /**
      * Constructor.
@@ -136,4 +140,19 @@ public class CacheFileEntry {
         return height;
     }
 
+    /**
+     * Get the current value for the image orientation.
+     * @return The previously determined image orientation value.
+     */
+    public ImageOrientation getImageOrientation() {
+        return imageOrientation;
+    }
+
+    /**
+     * Set a new value for the image orientation.
+     * @param imageOrientation The new value for the determined image orientation.
+     */
+    public void setImageOrientation(ImageOrientation imageOrientation) {
+        this.imageOrientation = imageOrientation;
+    }
 }

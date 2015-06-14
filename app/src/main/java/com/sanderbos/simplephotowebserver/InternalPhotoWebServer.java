@@ -2,12 +2,14 @@ package com.sanderbos.simplephotowebserver;
 
 import android.app.Activity;
 import android.content.Context;
+import android.media.Image;
 import android.provider.MediaStore;
 
 import com.sanderbos.simplephotowebserver.cache.CacheDirectoryEntry;
 import com.sanderbos.simplephotowebserver.cache.CacheFileEntry;
 import com.sanderbos.simplephotowebserver.cache.CacheRegistry;
 import com.sanderbos.simplephotowebserver.cache.ThumbnailDataCache;
+import com.sanderbos.simplephotowebserver.util.ImageOrientation;
 import com.sanderbos.simplephotowebserver.util.MediaDirectoryFilter;
 import com.sanderbos.simplephotowebserver.util.MediaStoreUtil;
 import com.sanderbos.simplephotowebserver.util.MyLog;
@@ -404,12 +406,11 @@ public class InternalPhotoWebServer extends NanoHTTPD {
         if (requestState != null && requestState.getCurrentImagePath() != null) {
             String[] siblingImagePaths = getSiblingImages(currentPathCachedDirectory, requestState.getCurrentImagePath());
             CacheFileEntry cacheFileEntry = getOrCreateCacheFileEntry(requestState.getCurrentImagePath());
-            boolean isImageOrientationPortrait = false;
-            if (fullScreenMode) {
-                // Only determine this properly if needed.
-                isImageOrientationPortrait = treatAsImageOrientationPortrait(cacheFileEntry);
-            }
-            htmlOutput.addMainImageHtml(requestState.getCurrentImagePath(), siblingImagePaths[0], siblingImagePaths[1], fullScreenMode, isImageOrientationPortrait);
+
+            determineImageDimensionsAndOrientation(cacheFileEntry);
+            boolean isImageOrientationPortrait = treatAsImageOrientationPortrait(cacheFileEntry);
+            htmlOutput.addMainImageHtml(requestState.getCurrentImagePath(), siblingImagePaths[0], siblingImagePaths[1], fullScreenMode, isImageOrientationPortrait,
+                    cacheFileEntry.getImageOrientation());
             if (!fullScreenMode) {
                 htmlOutput.addSeparator();
             }
@@ -424,24 +425,12 @@ public class InternalPhotoWebServer extends NanoHTTPD {
      * This method is called 'treat as' because this method is a bit fuzzy and it will also treat some images that are technically landscape
      * as portrait, because it works better in the GUI.
      *
-     * @param cacheFileEntry The cache file entry to determine the orientation for. If set on the cache entry,
-     *                       its width and height are used. Otherwise, the width and height determined are cached.
+     * @param cacheFileEntry The cache file entry to determine the orientation for.
      * @return True in case the image dimensions are known, and the image orientation is portrait, false
      * in all other cases.
      */
     private boolean treatAsImageOrientationPortrait(CacheFileEntry cacheFileEntry) {
         boolean result = false;
-
-        if (cacheFileEntry.getHeight() == null) {
-            // Info not cached yet, determine and cache it now.
-            try {
-                int[] dimensions = ThumbnailUtil.getDimensions(cacheFileEntry.getFullPath());
-                cacheFileEntry.setWidthAndHeight(dimensions[0], dimensions[1]);
-            } catch (Exception exception) {
-                // Log problem but simply do not set dimensions.
-                MyLog.error("Could not get dimensions for image", exception);
-            }
-        }
 
         if (cacheFileEntry.getHeight() != null && cacheFileEntry.getHeight() > 0) {
             float width = cacheFileEntry.getWidth();
@@ -452,7 +441,37 @@ public class InternalPhotoWebServer extends NanoHTTPD {
             MyLog.debug("Image {0} has width={1} and height={2}", cacheFileEntry.getFullPath(), width, height);
         }
 
+        ImageOrientation orientation = cacheFileEntry.getImageOrientation();
+        if (orientation == ImageOrientation.ROTATE_90 || orientation == ImageOrientation.ROTATE_270) {
+            // Image will be rotated, so already treat the image different here.
+            result = !result;
+        }
         return result;
+    }
+
+    /**
+     * Check whether the dimensions and orientation of an image have already been determined before,
+     * and if not do so now.
+     * @param cacheFileEntry The cache file entry that will be updated in case dimensions and
+     *                       orientation are determined.
+     */
+    private void determineImageDimensionsAndOrientation(CacheFileEntry cacheFileEntry) {
+        // Check whether info has already been determined.
+        if (cacheFileEntry.getHeight() == null) {
+            // Info not cached yet, determine and cache it now.
+            try {
+                int[] dimensions = ThumbnailUtil.getDimensions(cacheFileEntry.getFullPath());
+                cacheFileEntry.setWidthAndHeight(dimensions[0], dimensions[1]);
+                String imagePath = cacheFileEntry.getFullPath();
+                if (MIME_TYPE_JPEG.equals(getMimeType(imagePath))) {
+                    // Perform extra step, determine a possible image rotation that needs to be applied.
+                    cacheFileEntry.setImageOrientation(ThumbnailUtil.getOrientationForImage(imagePath));
+                }
+            } catch (Exception exception) {
+                // Log problem but simply do not set dimensions.
+                MyLog.error("Could not get dimensions for image", exception);
+            }
+        }
     }
 
     /**

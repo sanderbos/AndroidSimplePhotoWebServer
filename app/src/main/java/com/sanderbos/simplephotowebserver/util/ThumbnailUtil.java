@@ -2,6 +2,7 @@ package com.sanderbos.simplephotowebserver.util;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.media.ExifInterface;
 
 import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
@@ -72,6 +73,7 @@ public class ThumbnailUtil {
 
     /**
      * Get the width and height of an image.
+     *
      * @param pathToImage The image whose dimensions to get.
      * @return An integer array with the width (index 0 in result) and height (index 1 in result) of an
      * image.
@@ -85,6 +87,44 @@ public class ThumbnailUtil {
         int[] result = new int[2];
         result[0] = bitmapOptions.outWidth;
         result[1] = bitmapOptions.outHeight;
+
         return result;
+    }
+
+    /**
+     * Determine the embedded orientation of a JPEG image. This method should only be called for
+     * JPEG images, as it inspects the Exif information.
+     *
+     * @param pathToJpegImage The full path of the image whose EXIF data to check.
+     * @return The image orientation, always returns a value (expections are handled internally),
+     * ROTATE_NONE in case no value could be determined.
+     */
+    public static ImageOrientation getOrientationForImage(String pathToJpegImage) {
+        ImageOrientation orientation = ImageOrientation.ROTATE_NONE;
+
+        try {
+            int exifOrientation = getExifOrientationForImage(pathToJpegImage);
+            orientation = ImageOrientation.getImageOrientationByExifInterfaceValue(exifOrientation);
+        } catch (Exception e) {
+            MyLog.error("Failed to get orientation, continuing with regular orientation", e);
+        }
+
+        return orientation;
+    }
+
+    /**
+     * Determine the exif orientation value for an image file.
+     *
+     * @param pathToImage The path to a JPEG image.
+     * @return The Exif orientation value.
+     * @throws IOException In case the JPEG file could not be read, or the Exif information could not
+     *                     be extracted.
+     */
+    private static int getExifOrientationForImage(String pathToImage) throws IOException {
+        ExifInterface exif = new ExifInterface(pathToImage);
+        int exifOrientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
+        MyLog.debug("Found Exif image orientation for file {0}: {1}", pathToImage, exifOrientation);
+
+        return exifOrientation;
     }
 }

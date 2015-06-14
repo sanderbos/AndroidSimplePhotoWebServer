@@ -5,6 +5,7 @@ import android.text.TextUtils;
 
 import com.sanderbos.simplephotowebserver.cache.CacheDirectoryEntry;
 import com.sanderbos.simplephotowebserver.cache.CacheFileEntry;
+import com.sanderbos.simplephotowebserver.util.ImageOrientation;
 
 import java.text.MessageFormat;
 import java.util.List;
@@ -36,6 +37,11 @@ public class HtmlTemplateProcessor {
      * Parameter used to set that full screen mode should be used to show photos.
      */
     public static final String PARAMETER_FULLSCREEN = "fullscreen";
+
+    /**
+     * Parameter used in image source URLs to indicate a rotation should be applied.
+     */
+    public static final String PARAMETER_APPLY_RATION = "rotation";
 
     /**
      * Url directory page parameter name.
@@ -343,8 +349,10 @@ public class HtmlTemplateProcessor {
      * @param inFullscreenMode           Whether we are currently using full screen mode.
      * @param isImageOrientationPortrait Is it known that this image is made in 'vertical mode', as in that it is more high than wide.
      *                                   (for performance, only used when inFullscreenMode is true)
+     * @param rotationParameter          If the image contains an embedded rotation, apply that to the image source URL.
      */
-    public void addMainImageHtml(String imagePath, String previousImagePath, String nextImagePath, boolean inFullscreenMode, boolean isImageOrientationPortrait) {
+    public void addMainImageHtml(String imagePath, String previousImagePath, String nextImagePath, boolean inFullscreenMode, boolean isImageOrientationPortrait,
+                                 ImageOrientation rotationParameter) {
         addHtmlContent("<table class='position-block-center'><tr><td>");
         if (previousImagePath != null) {
             String previousImageTag = createImage(constructTargetURL(ACTION_URL_SHOW_ICON, "previous"), "", getResourceText(R.string.html_text_previous_image));
@@ -361,7 +369,8 @@ public class HtmlTemplateProcessor {
                 imageCssClass = "image-main-fullscreen";
             }
         }
-        String imageTag = createImage(constructTargetURL(ACTION_URL_SHOW_PHOTO, imagePath), imageCssClass, null);
+        String imageSrcUrl = constructImageSrcURL(imagePath, rotationParameter);
+        String imageTag = createImage(imageSrcUrl, imageCssClass, null);
         addHtmlContent(imageTag);
 
         addHtmlContent("<br/>");
@@ -418,10 +427,27 @@ public class HtmlTemplateProcessor {
      *
      * @param action             The base action URL
      * @param pathParameterValue The value to use for the path parameter.
-     * @return The constructed string.
+     * @return The constructed url string.
      */
     private String constructTargetURL(String action, String pathParameterValue) {
         return MessageFormat.format("{0}?{1}={2}", action, PARAMETER_PATH, pathParameterValue);
+    }
+
+    /**
+     * Construct an action URL string, of the format showPhoto?path=pathParameterValue&rotation=degrees.
+     * The rotation parameter is optional, only if a deviating rotation paramter is present.
+     *
+     * @param pathParameterValue The value to use for the path parameter.
+     * @param rotationParameter  The rotation of the image, if known.
+     * @return The constructed url string.
+     */
+    private String constructImageSrcURL(String pathParameterValue, ImageOrientation rotationParameter) {
+        boolean addRotationParamter = rotationParameter != null && rotationParameter != ImageOrientation.ROTATE_NONE;
+        if (addRotationParamter) {
+            return constructTargetURL(ACTION_URL_SHOW_PHOTO, pathParameterValue, PARAMETER_APPLY_RATION, String.valueOf(rotationParameter.getRotationInDegrees()));
+        } else {
+            return constructTargetURL(ACTION_URL_SHOW_PHOTO, pathParameterValue);
+        }
     }
 
     /**
@@ -431,7 +457,7 @@ public class HtmlTemplateProcessor {
      * @param action                 The base action URL
      * @param pathParameterValue     The value to use for the path parameter.
      * @param addFullScreenParameter Whether or not to add an extra fullscreen url query parameter.
-     * @return The constructed string.
+     * @return The constructed url string.
      */
     private String constructTargetURLForFullScreen(String action, String pathParameterValue, boolean addFullScreenParameter) {
         if (addFullScreenParameter) {

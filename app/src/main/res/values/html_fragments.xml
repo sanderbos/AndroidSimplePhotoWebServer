@@ -26,6 +26,13 @@
             .thumbnail-cell-div {max-height: 40px; overflow: hidden; }\n
             .directory-box-selection {border: 3px solid white; padding-left: 4px; }\n
             .directory-box-chooser {border: 1px solid white; margin-left: 5px; }\n
+            .rotate90 {
+            		-webkit-transform: rotate(90deg);
+		            -moz-transform: rotate(90deg);
+		            -o-transform: rotate(90deg);
+		            -ms-transform: rotate(90deg);
+		            transform: rotate(90deg);
+	        }\n
         ]]>
     </string>
     <string name="html_main_template">
