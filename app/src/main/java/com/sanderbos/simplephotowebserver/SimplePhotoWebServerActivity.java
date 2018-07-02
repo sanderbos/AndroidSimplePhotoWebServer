@@ -1,6 +1,6 @@
 package com.sanderbos.simplephotowebserver;
 
-import android.support.v7.app.ActionBarActivity;
+import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -18,7 +18,7 @@ import java.text.MessageFormat;
 /**
  * Main activity for project, showing the status and allowing the server to be stopped and started.
  */
-public class SimplePhotoWebServerActivity extends ActionBarActivity {
+public class SimplePhotoWebServerActivity extends AppCompatActivity {
 
     /**
      * Reference to running web server daemon (null if not currently running).
@@ -183,10 +183,8 @@ public class SimplePhotoWebServerActivity extends ActionBarActivity {
 
     /**
      * Start the web server in the background.
-     *
-     * @return Whether the web server was started (currently always true).
      */
-    private boolean startWebServer() {
+    private void startWebServer() {
         MyLog.debug("startWebServer called");
         stopWebServer();
         int port = Integer.valueOf(getResources().getText(R.string.number_default_httpd_port).toString());
@@ -198,25 +196,19 @@ public class SimplePhotoWebServerActivity extends ActionBarActivity {
         }
         MyLog.info("Web server initialized.");
         updateGUIStatus();
-        return true;
     }
 
     /**
      * Stop the web server, if one is running  in the background.
-     *
-     * @return Whether the web server was stopped (currently always true).
      */
-    private boolean stopWebServer() {
+    private void  stopWebServer() {
         MyLog.debug("stopWebServer called");
-        boolean stopped = false;
         if (isWebServerRunning()) {
             internalWebServer.stop();
             internalWebServer = null;
-            stopped = true;
             MyLog.info("Web server stopped.");
         }
         updateGUIStatus();
-        return stopped;
     }
 
     /**
