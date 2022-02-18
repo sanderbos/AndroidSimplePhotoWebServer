@@ -1,0 +1,4 @@
+Build with (on JDK 17 now):
+gradlew clean assembleDebug
+
+Result in app\build\outputs\apk\debug\app-debug.apk
