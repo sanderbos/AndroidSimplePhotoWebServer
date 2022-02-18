@@ -17,7 +17,7 @@ This application collects no personally identifiable information. No usage data 
 
 ## Access to your photos
 
-The function of this app is to show your photos stored on your phone on your computers on your local network. For this function your photos are accessed by the app when you run it, and are accessible from your computers. Photos are never accessible to the maker of this app or other third parties, that does not have access to the URL that the app provides or is not on your local network.
+The function of this app is to show your photos stored on your phone on your computers on your local network. For this function your photos are accessed by the app when you run it, and are accessible from your computers. Photos are never accessible to the maker of this app or any other third parties, that are not on your local network. Other entities that do have access to your local network can have access to your photos if the app is running, and if they have the URL that this app provides.
 
 ## Changes to this Privacy Policy
 
